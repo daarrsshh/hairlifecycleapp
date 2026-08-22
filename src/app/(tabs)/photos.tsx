@@ -27,14 +27,15 @@ export default function PhotosScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <ThemedView style={styles.actionsRow}>
           <Link href="/photos/capture" asChild>
-            <Pressable style={[styles.actionButton, { backgroundColor: theme.primary }]}>
+            <Pressable style={StyleSheet.flatten([styles.actionButton, { backgroundColor: theme.primary }])}>
               <ThemedText style={{ color: theme.onPrimary }} type="smallBold">
                 Add photos
               </ThemedText>
             </Pressable>
           </Link>
           <Link href="/photos/compare" asChild>
-            <Pressable style={[styles.actionButton, { borderColor: theme.border, borderWidth: 1 }]}>
+            <Pressable
+              style={StyleSheet.flatten([styles.actionButton, { borderColor: theme.border, borderWidth: 1 }])}>
               <ThemedText type="smallBold">Compare</ThemedText>
             </Pressable>
           </Link>

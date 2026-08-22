@@ -36,7 +36,7 @@ export default function LearnScreen() {
                 <ThemedText type="smallBold">{category}</ThemedText>
                 {ARTICLES.filter((a) => a.category === category).map((article) => (
                   <Link key={article.id} href={`/learn/${article.id}`} asChild>
-                    <Pressable style={[styles.row, { borderColor: theme.border }]}>
+                    <Pressable style={StyleSheet.flatten([styles.row, { borderColor: theme.border }])}>
                       <ThemedText>{article.title}</ThemedText>
                     </Pressable>
                   </Link>
