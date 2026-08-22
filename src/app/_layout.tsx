@@ -28,21 +28,11 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <DoseNotificationResponder />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(onboarding)" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="consistency" options={{ headerShown: true, title: 'Consistency' }} />
-          <Stack.Screen name="timeline" options={{ headerShown: true, title: 'Timeline' }} />
-          <Stack.Screen name="treatment/start-new" options={{ headerShown: true, title: 'Start new treatment' }} />
-          <Stack.Screen
-            name="treatment/start-new-custom"
-            options={{ headerShown: true, title: 'Add my own' }}
-          />
-          <Stack.Screen name="treatment/confirm" options={{ headerShown: true, title: 'Confirm' }} />
-          <Stack.Screen name="photos/capture" options={{ headerShown: true, title: 'Add photos' }} />
-          <Stack.Screen name="photos/compare" options={{ headerShown: true, title: 'Compare' }} />
-          <Stack.Screen name="export" options={{ headerShown: true, title: 'Export' }} />
-        </Stack>
+        {/* Deliberately no per-route <Stack.Screen> children here — declaring ~10 of them with
+            custom options previously hung native-stack screen registration on-device (Android,
+            Expo Go SDK 57). Screens that want a header/title set it themselves via an inline
+            <Stack.Screen options={{...}} /> (see learn/[articleId].tsx for the pattern). */}
+        <Stack screenOptions={{ headerShown: false }} />
       </ThemeProvider>
     </QueryClientProvider>
   );

@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 
 import { AngleCaptureFlow, CAPTURE_ANGLES, type CapturedPhotos } from '@/features/photos/components/angle-capture-flow';
@@ -27,11 +27,14 @@ export default function CapturePhotosScreen() {
   }
 
   return (
-    <AngleCaptureFlow
-      headerText="Line up each angle the same way as last time for the clearest comparison."
-      saveLabel="Save"
-      saving={saving}
-      onSave={save}
-    />
+    <>
+      <Stack.Screen options={{ headerShown: true, title: 'Add photos' }} />
+      <AngleCaptureFlow
+        headerText="Line up each angle the same way as last time for the clearest comparison."
+        saveLabel="Save"
+        saving={saving}
+        onSave={save}
+      />
+    </>
   );
 }

@@ -1,3 +1,4 @@
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
@@ -23,6 +24,7 @@ export default function ConsistencyScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <Stack.Screen options={{ headerShown: true, title: 'Consistency' }} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.statsRow}>
           <StatTile label="Current streak" value={`${data.currentStreak}`} />

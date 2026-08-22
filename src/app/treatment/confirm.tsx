@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,6 +37,7 @@ export default function ConfirmStartNewTreatmentScreen() {
   if (!draft.planType) {
     return (
       <ThemedView style={styles.container}>
+        <Stack.Screen options={{ headerShown: true, title: 'Confirm' }} />
         <SafeAreaView style={styles.safeArea}>
           <ThemedText themeColor="textSecondary">Pick a routine first.</ThemedText>
         </SafeAreaView>
@@ -81,6 +82,7 @@ export default function ConfirmStartNewTreatmentScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <Stack.Screen options={{ headerShown: true, title: 'Confirm' }} />
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.body}>
           {currentLabel ? (

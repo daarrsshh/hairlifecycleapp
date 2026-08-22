@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet } from 'react-native';
 
@@ -50,6 +51,7 @@ export default function ComparePhotosScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <Stack.Screen options={{ headerShown: true, title: 'Compare' }} />
       <ScrollView contentContainerStyle={styles.content}>
         <ThemedView style={styles.chipRow}>
           {ANGLES.map((a) => {

@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,6 +37,7 @@ export default function StartNewTreatmentCustomScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <Stack.Screen options={{ headerShown: true, title: 'Add my own' }} />
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.form}>
           {drugs.map((d, i) => (

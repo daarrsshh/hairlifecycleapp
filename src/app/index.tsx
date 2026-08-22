@@ -14,13 +14,19 @@ export default function Index() {
     if (isLoading) return;
 
     (async () => {
-      if (profile) {
-        const periods = await getAllTreatmentPeriods();
-        if (periods[0]) {
-          await reconcileMissedDoses(periods[0].startDate);
+      try {
+        if (profile) {
+          const periods = await getAllTreatmentPeriods();
+          if (periods[0]) {
+            await reconcileMissedDoses(periods[0].startDate);
+          }
         }
+      } catch (e) {
+        // Reconciliation failing shouldn't leave the user stuck on the splash screen forever.
+        console.warn('[index] reconciliation failed', e);
+      } finally {
+        await SplashScreen.hideAsync();
       }
-      await SplashScreen.hideAsync();
     })();
   }, [isLoading, profile]);
 

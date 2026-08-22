@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
@@ -35,6 +36,7 @@ export default function TimelineScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <Stack.Screen options={{ headerShown: true, title: 'Timeline' }} />
       <ScrollView contentContainerStyle={styles.content}>
         {!isLoading && data && data.length === 0 ? (
           <ThemedText themeColor="textSecondary">Nothing here yet.</ThemedText>

@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -15,6 +15,7 @@ export default function StartNewTreatmentScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <Stack.Screen options={{ headerShown: true, title: 'Start new treatment' }} />
       <SafeAreaView style={styles.safeArea}>
         <ThemedText themeColor="textSecondary" type="small">
           Pick what you&apos;re switching to.
