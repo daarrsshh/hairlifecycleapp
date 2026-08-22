@@ -1,6 +1,6 @@
 import type { DayStatus } from '@/features/dose-log/doseState';
 
-import { computeBestStreak, computeCurrentStreak, computeMonthRatio } from './streak';
+import { computeBestStreak, computeCurrentStreak, computeMonthRatio, computeRangeRatio } from './streak';
 
 function resolverFromMap(map: Record<string, DayStatus>, fallback: DayStatus = 'no-treatment') {
   return (date: string) => map[date] ?? fallback;
@@ -84,5 +84,19 @@ describe('computeMonthRatio', () => {
     // and the 5th is excluded (in-progress/today), leaving days 1-3 as the applicable set.
     const result = computeMonthRatio(2026, 8, '2026-08-05', status);
     expect(result).toEqual({ completed: 2, total: 3 });
+  });
+});
+
+describe('computeRangeRatio', () => {
+  it('counts an arbitrary date range, not bound to a calendar month', () => {
+    const status = resolverFromMap({
+      '2026-07-30': 'complete',
+      '2026-07-31': 'incomplete',
+      '2026-08-01': 'complete',
+    });
+    expect(computeRangeRatio('2026-07-30', '2026-08-01', '2026-08-01', status)).toEqual({
+      completed: 2,
+      total: 3,
+    });
   });
 });

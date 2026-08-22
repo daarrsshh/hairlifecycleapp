@@ -20,7 +20,7 @@ import {
 } from '@/features/consistency/streak';
 import { today } from '@/lib/date';
 
-async function loadConsistencyContext() {
+export async function loadConsistencyContext() {
   const { periods, drugs, pauseWindows } = await loadDosingContext();
   const allLogs = await db.select().from(doseLogs);
   const currentDate = today();

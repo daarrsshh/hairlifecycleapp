@@ -64,6 +64,28 @@ export interface MonthRatio {
 }
 
 /** "26 of 30 days" — deliberately a count, not a percentage (PRD §5.3). Only counts days that have actually elapsed and had a treatment active. */
+export function computeRangeRatio(
+  fromDate: DateString,
+  toDate: DateString,
+  currentDate: DateString,
+  dayStatus: DayStatusResolver
+): MonthRatio {
+  let completed = 0;
+  let total = 0;
+  let cursor = fromDate;
+
+  while (!isBefore(toDate, cursor) && !isBefore(currentDate, cursor)) {
+    const status = dayStatus(cursor);
+    if (status !== 'no-treatment' && status !== 'in-progress') {
+      total++;
+      if (status === 'complete') completed++;
+    }
+    cursor = addDays(cursor, 1);
+  }
+
+  return { completed, total };
+}
+
 export function computeMonthRatio(
   year: number,
   month: number, // 1-12
@@ -71,20 +93,9 @@ export function computeMonthRatio(
   dayStatus: DayStatusResolver
 ): MonthRatio {
   const daysInMonth = new Date(year, month, 0).getDate();
-  let completed = 0;
-  let total = 0;
-
-  for (let day = 1; day <= daysInMonth; day++) {
-    const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    if (isBefore(currentDate, date)) break;
-
-    const status = dayStatus(date);
-    if (status === 'no-treatment' || status === 'in-progress') continue;
-    total++;
-    if (status === 'complete') completed++;
-  }
-
-  return { completed, total };
+  const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+  const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+  return computeRangeRatio(monthStart, monthEnd, currentDate, dayStatus);
 }
 
 export interface SlotBreakdown {

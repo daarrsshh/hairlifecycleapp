@@ -41,6 +41,7 @@ export default function RootLayout() {
           <Stack.Screen name="treatment/confirm" options={{ headerShown: true, title: 'Confirm' }} />
           <Stack.Screen name="photos/capture" options={{ headerShown: true, title: 'Add photos' }} />
           <Stack.Screen name="photos/compare" options={{ headerShown: true, title: 'Compare' }} />
+          <Stack.Screen name="export" options={{ headerShown: true, title: 'Export' }} />
         </Stack>
       </ThemeProvider>
     </QueryClientProvider>
