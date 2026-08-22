@@ -30,3 +30,9 @@ export function daysBetween(from: DateString, to: DateString): number {
 export function isBefore(a: DateString, b: DateString): boolean {
   return a < b;
 }
+
+/** Builds a concrete local Date for scheduling a notification on a given calendar day at a given time. */
+export function dateStringAt(date: DateString, hour: number, minute = 0): Date {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(year, month - 1, day, hour, minute, 0, 0);
+}

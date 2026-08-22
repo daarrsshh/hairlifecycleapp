@@ -5,7 +5,10 @@ import { Directory, File, Paths } from 'expo-file-system';
 import { db } from '@/db/client';
 import { photos } from '@/db/schema';
 import { getActiveTreatmentPeriod } from '@/features/treatment/api';
-import { today, type DateString } from '@/lib/date';
+import { computeNextPhotoReminderDate } from '@/features/photos/photo-reminder';
+import { getAppSettings, setLastPhotoSetDate } from '@/features/onboarding/settings-api';
+import { dateStringAt, today, type DateString } from '@/lib/date';
+import { schedulePhotoReminder } from '@/lib/notifications';
 
 export type PhotoAngle = 'crown' | 'hairline' | 'left_temple' | 'right_temple';
 
@@ -54,4 +57,13 @@ export async function getAllPhotos() {
 
 export async function getPhotosByAngle(angle: PhotoAngle) {
   return db.select().from(photos).where(eq(photos.angle, angle)).orderBy(photos.date);
+}
+
+/** Call once a full angle set has been captured: records the date and reschedules the next "every 15 days" photo reminder (PRD §4.3/§5.4) from it. */
+export async function recordPhotoSetCompleted(date: DateString = today()) {
+  await setLastPhotoSetDate(date);
+  const settings = await getAppSettings();
+  const intervalDays = settings?.photoReminderIntervalDays ?? 15;
+  const nextDate = computeNextPhotoReminderDate(date, intervalDays);
+  await schedulePhotoReminder(dateStringAt(nextDate, 10));
 }

@@ -88,3 +88,22 @@ export async function cancelAllDailyReminders() {
   await Notifications.cancelScheduledNotificationAsync(REPROMPT_IDENTIFIER.am).catch(() => {});
   await Notifications.cancelScheduledNotificationAsync(REPROMPT_IDENTIFIER.pm).catch(() => {});
 }
+
+const PHOTO_REMINDER_IDENTIFIER = 'photo-reminder';
+
+/** The "every 15 days" photo prompt (PRD §4.3/§5.4) — a one-off notification, rescheduled each time a photo set completes. `at` should be `computeNextPhotoReminderDate` turned into a concrete Date. */
+export async function schedulePhotoReminder(at: Date) {
+  await Notifications.cancelScheduledNotificationAsync(PHOTO_REMINDER_IDENTIFIER).catch(() => {});
+  await Notifications.scheduleNotificationAsync({
+    identifier: PHOTO_REMINDER_IDENTIFIER,
+    content: {
+      title: 'Time for new photos',
+      body: 'See how far you’ve come — add a fresh set of progress photos.',
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at },
+  });
+}
+
+export async function cancelPhotoReminder() {
+  await Notifications.cancelScheduledNotificationAsync(PHOTO_REMINDER_IDENTIFIER).catch(() => {});
+}

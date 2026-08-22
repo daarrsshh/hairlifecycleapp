@@ -35,7 +35,13 @@
       ],
       "expo-sqlite",
       "@react-native-community/datetimepicker",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Used to line up your progress photos consistently, angle by angle."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

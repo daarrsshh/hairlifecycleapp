@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
@@ -10,6 +10,8 @@ import { Spacing } from '@/constants/theme';
 import { useCurrentStreak } from '@/features/consistency/hooks';
 import { computeEffectiveState, type DoseSlot, type DoseState } from '@/features/dose-log/doseState';
 import { useLogDose, useTodayDoses } from '@/features/dose-log/hooks';
+import { getAppSettings } from '@/features/onboarding/settings-api';
+import { isPhotoReminderDue } from '@/features/photos/photo-reminder';
 import { resumeTreatmentPeriod } from '@/features/treatment/api';
 import { useTheme } from '@/hooks/use-theme';
 import { today } from '@/lib/date';
@@ -19,6 +21,7 @@ const SLOT_LABEL: Record<DoseSlot, string> = { am: 'Morning', pm: 'Evening' };
 export default function HomeScreen() {
   const { data, isLoading } = useTodayDoses();
   const { data: streak } = useCurrentStreak();
+  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: getAppSettings });
   const logDose = useLogDose();
   const queryClient = useQueryClient();
 
@@ -71,6 +74,18 @@ export default function HomeScreen() {
               <ThemedText type="linkPrimary">Resume</ThemedText>
             </Pressable>
           </ThemedView>
+        ) : null}
+
+        {settings &&
+        isPhotoReminderDue(settings.lastPhotoSetDate, currentDate, settings.photoReminderIntervalDays) ? (
+          <Link href="/photos/capture" asChild>
+            <Pressable>
+              <ThemedView type="backgroundElement" style={styles.pausedCard}>
+                <ThemedText type="smallBold">Time for new photos</ThemedText>
+                <ThemedText type="linkPrimary">Add photos</ThemedText>
+              </ThemedView>
+            </Pressable>
+          </Link>
         ) : null}
 
         {requiredSlots.length === 0 && period.status !== 'paused' ? (
