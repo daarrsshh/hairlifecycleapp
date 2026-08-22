@@ -1,4 +1,3 @@
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
@@ -6,22 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { TimePickerField } from '@/components/time-picker-field';
 import { Spacing } from '@/constants/theme';
 import { useOnboardingDraft } from '@/features/onboarding/draft-store';
 import { useTheme } from '@/hooks/use-theme';
-
-function timeStringToDate(time: string): Date {
-  const [hours, minutes] = time.split(':').map(Number);
-  const d = new Date();
-  d.setHours(hours, minutes, 0, 0);
-  return d;
-}
-
-function dateToTimeString(date: Date): string {
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
-}
 
 export default function ReminderTimesScreen() {
   const theme = useTheme();
@@ -37,23 +24,20 @@ export default function ReminderTimesScreen() {
             When should we remind you?
           </ThemedText>
 
-          <ThemedView type="backgroundElement" style={styles.pickerCard}>
-            <ThemedText type="smallBold">Morning</ThemedText>
-            <DateTimePicker
-              value={timeStringToDate(amTime)}
-              mode="time"
-              onChange={(_, date) => date && setAmTime(dateToTimeString(date))}
-            />
-          </ThemedView>
-
-          <ThemedView type="backgroundElement" style={styles.pickerCard}>
-            <ThemedText type="smallBold">Evening</ThemedText>
-            <DateTimePicker
-              value={timeStringToDate(pmTime)}
-              mode="time"
-              onChange={(_, date) => date && setPmTime(dateToTimeString(date))}
-            />
-          </ThemedView>
+          <TimePickerField
+            label="Morning"
+            time={amTime}
+            onChange={setAmTime}
+            type="backgroundElement"
+            style={styles.pickerCard}
+          />
+          <TimePickerField
+            label="Evening"
+            time={pmTime}
+            onChange={setPmTime}
+            type="backgroundElement"
+            style={styles.pickerCard}
+          />
         </ThemedView>
 
         <Pressable
