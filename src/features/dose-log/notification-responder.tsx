@@ -1,11 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
-import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
 
 import { logDose, recordDoseNoResponse } from '@/features/dose-log/api';
 import { computeRepromptTime, type DoseSlot } from '@/features/dose-log/doseState';
 import { getActiveTreatmentPeriod } from '@/features/treatment/api';
 import { today } from '@/lib/date';
+import { getNotificationsModule } from '@/lib/notifications-safe';
 import { scheduleReprompt } from '@/lib/notifications';
 
 /** Wires the Yes/No/Skip notification action buttons to dose logging. Mount once, near the app root. */
@@ -13,6 +13,9 @@ export function DoseNotificationResponder() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    const Notifications = getNotificationsModule();
+    if (!Notifications) return; // e.g. Android + Expo Go — see notifications-safe.ts
+
     // Configured here (not at module scope) so it never runs during SSR's plain-Node module pass.
     Notifications.setNotificationHandler({
       handleNotification: async () => ({

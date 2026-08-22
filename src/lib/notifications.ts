@@ -1,6 +1,5 @@
-import * as Notifications from 'expo-notifications';
-
 import type { DoseSlot } from '@/features/dose-log/doseState';
+import { getNotificationsModule } from '@/lib/notifications-safe';
 
 const IDENTIFIER: Record<DoseSlot, string> = {
   am: 'reminder-am',
@@ -15,6 +14,8 @@ const REPROMPT_IDENTIFIER: Record<DoseSlot, string> = {
 export const DOSE_RESPONSE_CATEGORY = 'dose-response';
 
 export async function requestNotificationPermissions(): Promise<boolean> {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return false;
   const current = await Notifications.getPermissionsAsync();
   if (current.granted) return true;
   const requested = await Notifications.requestPermissionsAsync();
@@ -23,6 +24,8 @@ export async function requestNotificationPermissions(): Promise<boolean> {
 
 /** Registers the Yes/No/Skip action buttons. Idempotent — safe to call on every launch. */
 export async function ensureDoseResponseCategory() {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
   await Notifications.setNotificationCategoryAsync(DOSE_RESPONSE_CATEGORY, [
     { identifier: 'yes', buttonTitle: 'Yes', options: { opensAppToForeground: false } },
     { identifier: 'no', buttonTitle: 'No', options: { opensAppToForeground: false } },
@@ -43,6 +46,9 @@ export async function rescheduleDailyReminders(
   requiredSlots: DoseSlot[],
   times: { am: string; pm: string }
 ) {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
+
   await ensureDoseResponseCategory();
   await Notifications.cancelScheduledNotificationAsync(IDENTIFIER.am).catch(() => {});
   await Notifications.cancelScheduledNotificationAsync(IDENTIFIER.pm).catch(() => {});
@@ -68,6 +74,9 @@ export async function rescheduleDailyReminders(
 
 /** A "No" response's one-off follow-up (PRD §8: +6h, dropped outside 10:00-24:00 — see computeRepromptTime). Replaces any earlier reprompt for the same slot. */
 export async function scheduleReprompt(slot: DoseSlot, at: Date) {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
+
   await ensureDoseResponseCategory();
   await Notifications.cancelScheduledNotificationAsync(REPROMPT_IDENTIFIER[slot]).catch(() => {});
   await Notifications.scheduleNotificationAsync({
@@ -83,6 +92,8 @@ export async function scheduleReprompt(slot: DoseSlot, at: Date) {
 }
 
 export async function cancelAllDailyReminders() {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
   await Notifications.cancelScheduledNotificationAsync(IDENTIFIER.am).catch(() => {});
   await Notifications.cancelScheduledNotificationAsync(IDENTIFIER.pm).catch(() => {});
   await Notifications.cancelScheduledNotificationAsync(REPROMPT_IDENTIFIER.am).catch(() => {});
@@ -93,6 +104,8 @@ const PHOTO_REMINDER_IDENTIFIER = 'photo-reminder';
 
 /** The "every 15 days" photo prompt (PRD §4.3/§5.4) — a one-off notification, rescheduled each time a photo set completes. `at` should be `computeNextPhotoReminderDate` turned into a concrete Date. */
 export async function schedulePhotoReminder(at: Date) {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
   await Notifications.cancelScheduledNotificationAsync(PHOTO_REMINDER_IDENTIFIER).catch(() => {});
   await Notifications.scheduleNotificationAsync({
     identifier: PHOTO_REMINDER_IDENTIFIER,
@@ -105,5 +118,7 @@ export async function schedulePhotoReminder(at: Date) {
 }
 
 export async function cancelPhotoReminder() {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) return;
   await Notifications.cancelScheduledNotificationAsync(PHOTO_REMINDER_IDENTIFIER).catch(() => {});
 }
