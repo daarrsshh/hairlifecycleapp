@@ -39,6 +39,8 @@ export default function RootLayout() {
             options={{ headerShown: true, title: 'Add my own' }}
           />
           <Stack.Screen name="treatment/confirm" options={{ headerShown: true, title: 'Confirm' }} />
+          <Stack.Screen name="photos/capture" options={{ headerShown: true, title: 'Add photos' }} />
+          <Stack.Screen name="photos/compare" options={{ headerShown: true, title: 'Compare' }} />
         </Stack>
       </ThemeProvider>
     </QueryClientProvider>

@@ -21,3 +21,12 @@ export async function setReminderTimes(reminderAmTime: string, reminderPmTime: s
     await db.insert(appSettings).values({ id: SETTINGS_ID, reminderAmTime, reminderPmTime });
   }
 }
+
+export async function setLastPhotoSetDate(date: string) {
+  const existing = await getAppSettings();
+  if (existing) {
+    await db.update(appSettings).set({ lastPhotoSetDate: date }).where(eq(appSettings.id, SETTINGS_ID));
+  } else {
+    await db.insert(appSettings).values({ id: SETTINGS_ID, lastPhotoSetDate: date });
+  }
+}

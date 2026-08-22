@@ -1,8 +1,10 @@
+import { eq } from 'drizzle-orm';
 import { randomUUID } from 'expo-crypto';
 import { Directory, File, Paths } from 'expo-file-system';
 
 import { db } from '@/db/client';
 import { photos } from '@/db/schema';
+import { getActiveTreatmentPeriod } from '@/features/treatment/api';
 import { today, type DateString } from '@/lib/date';
 
 export type PhotoAngle = 'crown' | 'hairline' | 'left_temple' | 'right_temple';
@@ -40,6 +42,16 @@ export async function savePhoto(
   return destination.uri;
 }
 
+/** Convenience wrapper for capture flows outside onboarding, where there's no treatment period object already in hand. */
+export async function captureCurrentPhoto(sourceUri: string, angle: PhotoAngle) {
+  const period = await getActiveTreatmentPeriod();
+  return savePhoto(sourceUri, angle, period?.id ?? null);
+}
+
 export async function getAllPhotos() {
   return db.select().from(photos);
+}
+
+export async function getPhotosByAngle(angle: PhotoAngle) {
+  return db.select().from(photos).where(eq(photos.angle, angle)).orderBy(photos.date);
 }
