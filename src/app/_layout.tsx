@@ -30,6 +30,13 @@ export default function RootLayout() {
           <Stack.Screen name="(onboarding)" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="consistency" options={{ headerShown: true, title: 'Consistency' }} />
+          <Stack.Screen name="timeline" options={{ headerShown: true, title: 'Timeline' }} />
+          <Stack.Screen name="treatment/start-new" options={{ headerShown: true, title: 'Start new treatment' }} />
+          <Stack.Screen
+            name="treatment/start-new-custom"
+            options={{ headerShown: true, title: 'Add my own' }}
+          />
+          <Stack.Screen name="treatment/confirm" options={{ headerShown: true, title: 'Confirm' }} />
         </Stack>
       </ThemeProvider>
     </QueryClientProvider>

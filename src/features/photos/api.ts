@@ -39,3 +39,7 @@ export async function savePhoto(
 
   return destination.uri;
 }
+
+export async function getAllPhotos() {
+  return db.select().from(photos);
+}

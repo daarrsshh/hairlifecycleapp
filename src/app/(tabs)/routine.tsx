@@ -1,11 +1,18 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { getActiveTreatmentPeriod, getDrugsForPeriod, pauseTreatmentPeriod, resumeTreatmentPeriod } from '@/features/treatment/api';
+import { describeTreatment } from '@/features/treatment/describe';
+import {
+  getActiveTreatmentPeriod,
+  getDrugsForPeriod,
+  pauseTreatmentPeriod,
+  resumeTreatmentPeriod,
+} from '@/features/treatment/api';
 
 export default function RoutineScreen() {
   const queryClient = useQueryClient();
@@ -21,6 +28,8 @@ export default function RoutineScreen() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['routine'] });
     queryClient.invalidateQueries({ queryKey: ['doses'] });
+    queryClient.invalidateQueries({ queryKey: ['streak'] });
+    queryClient.invalidateQueries({ queryKey: ['consistency'] });
   };
 
   return (
@@ -30,9 +39,7 @@ export default function RoutineScreen() {
 
         {!isLoading && data?.period ? (
           <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="smallBold">
-              {data.drugs.map((d) => d.drugName).join(' + ')}
-            </ThemedText>
+            <ThemedText type="smallBold">{describeTreatment(data.period.planType, data.drugs)}</ThemedText>
             <ThemedText themeColor="textSecondary" type="small">
               Since {data.period.startDate}
             </ThemedText>
@@ -53,9 +60,17 @@ export default function RoutineScreen() {
           </ThemedView>
         ) : null}
 
-        <ThemedText themeColor="textSecondary" type="small">
-          Starting a new treatment and the full timeline are coming soon.
-        </ThemedText>
+        <Link href="/treatment/start-new" asChild>
+          <Pressable>
+            <ThemedText type="linkPrimary">Start new treatment</ThemedText>
+          </Pressable>
+        </Link>
+
+        <Link href="/timeline" asChild>
+          <Pressable>
+            <ThemedText type="linkPrimary">View timeline</ThemedText>
+          </Pressable>
+        </Link>
       </SafeAreaView>
     </ThemedView>
   );
