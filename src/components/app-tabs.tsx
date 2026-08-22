@@ -25,7 +25,7 @@ export default function AppTabs() {
       <TabList asChild>
         <ThemedView
           type="backgroundElement"
-          style={[styles.tabList, { paddingBottom: insets.bottom + 8 }]}>
+          style={StyleSheet.flatten([styles.tabList, { paddingBottom: insets.bottom + 8 }])}>
           <TabTrigger name="home" href="/" asChild>
             <TabButton icon="home">Home</TabButton>
           </TabTrigger>
