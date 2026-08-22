@@ -22,6 +22,15 @@ export async function setReminderTimes(reminderAmTime: string, reminderPmTime: s
   }
 }
 
+export async function setNotificationsEnabled(enabled: boolean) {
+  const existing = await getAppSettings();
+  if (existing) {
+    await db.update(appSettings).set({ notificationsEnabled: enabled }).where(eq(appSettings.id, SETTINGS_ID));
+  } else {
+    await db.insert(appSettings).values({ id: SETTINGS_ID, notificationsEnabled: enabled });
+  }
+}
+
 export async function setLastPhotoSetDate(date: string) {
   const existing = await getAppSettings();
   if (existing) {

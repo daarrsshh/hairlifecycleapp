@@ -8,9 +8,10 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { getRequiredSlotsForDate } from '@/features/dose-log/api';
-import { getAppSettings, setReminderTimes } from '@/features/onboarding/settings-api';
+import { getAppSettings, setNotificationsEnabled, setReminderTimes } from '@/features/onboarding/settings-api';
+import { useTheme } from '@/hooks/use-theme';
 import { today } from '@/lib/date';
-import { rescheduleDailyReminders } from '@/lib/notifications';
+import { cancelAllDailyReminders, rescheduleDailyReminders } from '@/lib/notifications';
 
 function timeStringToDate(time: string): Date {
   const [hours, minutes] = time.split(':').map(Number);
@@ -26,6 +27,7 @@ function dateToTimeString(date: Date): string {
 }
 
 export default function MeScreen() {
+  const theme = useTheme();
   const queryClient = useQueryClient();
   const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: getAppSettings });
 
@@ -34,8 +36,26 @@ export default function MeScreen() {
     const am = slot === 'am' ? dateToTimeString(date) : settings.reminderAmTime;
     const pm = slot === 'pm' ? dateToTimeString(date) : settings.reminderPmTime;
     await setReminderTimes(am, pm);
-    const requiredSlots = await getRequiredSlotsForDate(today());
-    await rescheduleDailyReminders(requiredSlots, { am, pm });
+    if (settings.notificationsEnabled) {
+      const requiredSlots = await getRequiredSlotsForDate(today());
+      await rescheduleDailyReminders(requiredSlots, { am, pm });
+    }
+    queryClient.invalidateQueries({ queryKey: ['settings'] });
+  }
+
+  async function toggleNotifications() {
+    if (!settings) return;
+    const next = !settings.notificationsEnabled;
+    await setNotificationsEnabled(next);
+    if (next) {
+      const requiredSlots = await getRequiredSlotsForDate(today());
+      await rescheduleDailyReminders(requiredSlots, {
+        am: settings.reminderAmTime,
+        pm: settings.reminderPmTime,
+      });
+    } else {
+      await cancelAllDailyReminders();
+    }
     queryClient.invalidateQueries({ queryKey: ['settings'] });
   }
 
@@ -46,6 +66,19 @@ export default function MeScreen() {
 
         {settings ? (
           <ThemedView type="backgroundElement" style={styles.card}>
+            <Pressable style={styles.pickerRow} onPress={toggleNotifications}>
+              <ThemedText type="smallBold">Notifications</ThemedText>
+              <ThemedView
+                type="backgroundSelected"
+                style={[styles.toggle, settings.notificationsEnabled && { backgroundColor: theme.primary }]}>
+                <ThemedText
+                  type="small"
+                  style={settings.notificationsEnabled ? { color: theme.onPrimary } : undefined}>
+                  {settings.notificationsEnabled ? 'On' : 'Off'}
+                </ThemedText>
+              </ThemedView>
+            </Pressable>
+
             <ThemedText type="smallBold">Reminders</ThemedText>
 
             <ThemedView style={styles.pickerRow}>
@@ -83,4 +116,5 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, paddingHorizontal: Spacing.four, gap: Spacing.three },
   card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
   pickerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  toggle: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.one, borderRadius: Spacing.four },
 });
