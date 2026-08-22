@@ -141,15 +141,12 @@ function StateActions({
   if (state === 'taken') {
     return <ThemedText style={{ color: theme.taken }}>✓ Taken</ThemedText>;
   }
-  if (state === 'skipped') {
-    return <ThemedText style={{ color: theme.missed }}>Skipped</ThemedText>;
-  }
-  if (state === 'missed') {
-    return (
-      <Pressable onPress={onTaken}>
-        <ThemedText style={{ color: theme.missed }}>Missed · tap to log now</ThemedText>
-      </Pressable>
-    );
+  if (state === 'skipped' || state === 'missed') {
+    // Skipped and Missed look identical (icon + color, no distinguishing text) — the
+    // deliberate-vs-forgotten distinction is data-only (PRD §5.2/§9). Missed alone stays
+    // tappable, since — unlike a locked Skip — it's still open to a late Taken.
+    const notTaken = <ThemedText style={{ color: theme.missed }}>– Not taken</ThemedText>;
+    return state === 'missed' ? <Pressable onPress={onTaken}>{notTaken}</Pressable> : notTaken;
   }
 
   return (
