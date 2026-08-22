@@ -6,6 +6,7 @@ import { useColorScheme } from 'react-native';
 
 import { db } from '@/db/client';
 import migrations from '@/db/migrations/migrations';
+import { DoseNotificationResponder } from '@/features/dose-log/notification-responder';
 import { queryClient } from '@/lib/queryClient';
 
 SplashScreen.preventAutoHideAsync();
@@ -26,6 +27,7 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <DoseNotificationResponder />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(onboarding)" />
           <Stack.Screen name="(tabs)" />

@@ -7,11 +7,27 @@ const IDENTIFIER: Record<DoseSlot, string> = {
   pm: 'reminder-pm',
 };
 
+const REPROMPT_IDENTIFIER: Record<DoseSlot, string> = {
+  am: 'reminder-am-reprompt',
+  pm: 'reminder-pm-reprompt',
+};
+
+export const DOSE_RESPONSE_CATEGORY = 'dose-response';
+
 export async function requestNotificationPermissions(): Promise<boolean> {
   const current = await Notifications.getPermissionsAsync();
   if (current.granted) return true;
   const requested = await Notifications.requestPermissionsAsync();
   return requested.granted;
+}
+
+/** Registers the Yes/No/Skip action buttons. Idempotent — safe to call on every launch. */
+export async function ensureDoseResponseCategory() {
+  await Notifications.setNotificationCategoryAsync(DOSE_RESPONSE_CATEGORY, [
+    { identifier: 'yes', buttonTitle: 'Yes', options: { opensAppToForeground: false } },
+    { identifier: 'no', buttonTitle: 'No', options: { opensAppToForeground: false } },
+    { identifier: 'skip', buttonTitle: 'Skip', options: { opensAppToForeground: false } },
+  ]);
 }
 
 function parseTime(time: string): { hour: number; minute: number } {
@@ -27,6 +43,7 @@ export async function rescheduleDailyReminders(
   requiredSlots: DoseSlot[],
   times: { am: string; pm: string }
 ) {
+  await ensureDoseResponseCategory();
   await Notifications.cancelScheduledNotificationAsync(IDENTIFIER.am).catch(() => {});
   await Notifications.cancelScheduledNotificationAsync(IDENTIFIER.pm).catch(() => {});
 
@@ -34,7 +51,12 @@ export async function rescheduleDailyReminders(
     const { hour, minute } = parseTime(times[slot]);
     await Notifications.scheduleNotificationAsync({
       identifier: IDENTIFIER[slot],
-      content: { title: 'Did you take your meds?', body: 'Log today\'s dose in a tap.' },
+      content: {
+        title: 'Did you take your meds?',
+        body: "Log today's dose in a tap.",
+        categoryIdentifier: DOSE_RESPONSE_CATEGORY,
+        data: { slot },
+      },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour,
@@ -44,7 +66,25 @@ export async function rescheduleDailyReminders(
   }
 }
 
+/** A "No" response's one-off follow-up (PRD §8: +6h, dropped outside 10:00-24:00 — see computeRepromptTime). Replaces any earlier reprompt for the same slot. */
+export async function scheduleReprompt(slot: DoseSlot, at: Date) {
+  await ensureDoseResponseCategory();
+  await Notifications.cancelScheduledNotificationAsync(REPROMPT_IDENTIFIER[slot]).catch(() => {});
+  await Notifications.scheduleNotificationAsync({
+    identifier: REPROMPT_IDENTIFIER[slot],
+    content: {
+      title: 'Still there?',
+      body: "Did you take today's dose?",
+      categoryIdentifier: DOSE_RESPONSE_CATEGORY,
+      data: { slot },
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at },
+  });
+}
+
 export async function cancelAllDailyReminders() {
   await Notifications.cancelScheduledNotificationAsync(IDENTIFIER.am).catch(() => {});
   await Notifications.cancelScheduledNotificationAsync(IDENTIFIER.pm).catch(() => {});
+  await Notifications.cancelScheduledNotificationAsync(REPROMPT_IDENTIFIER.am).catch(() => {});
+  await Notifications.cancelScheduledNotificationAsync(REPROMPT_IDENTIFIER.pm).catch(() => {});
 }
