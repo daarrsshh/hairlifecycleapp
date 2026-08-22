@@ -1,6 +1,7 @@
 import { Tabs, TabList, TabTrigger, TabSlot, type TabTriggerSlotProps } from 'expo-router/ui';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { Pressable, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
@@ -16,11 +17,15 @@ const TAB_ICONS: Record<string, SymbolViewProps['name']> = {
 };
 
 export default function AppTabs() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs>
       <TabSlot style={{ flex: 1 }} />
       <TabList asChild>
-        <ThemedView type="backgroundElement" style={styles.tabList}>
+        <ThemedView
+          type="backgroundElement"
+          style={[styles.tabList, { paddingBottom: insets.bottom + 8 }]}>
           <TabTrigger name="home" href="/" asChild>
             <TabButton icon="home">Home</TabButton>
           </TabTrigger>
@@ -73,7 +78,6 @@ const styles = StyleSheet.create({
   tabList: {
     flexDirection: 'row',
     paddingTop: 8,
-    paddingBottom: 24,
     paddingHorizontal: 8,
   },
   tabButton: {
