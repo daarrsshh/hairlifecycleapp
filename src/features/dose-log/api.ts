@@ -4,6 +4,7 @@ import { randomUUID } from 'expo-crypto';
 import { db } from '@/db/client';
 import { doseLogs, treatmentPausePeriods, treatmentPeriodDrugs, treatmentPeriods } from '@/db/schema';
 import {
+  findPeriodForDate,
   getRequiredSlots,
   resolveDayStatus,
   type DoseLogRecord,
@@ -101,9 +102,7 @@ export async function reconcileMissedDoses(fromDate: DateString) {
   while (cursor < currentDate) {
     const required = getRequiredSlots(cursor, periods, pauseWindows, drugs);
     for (const slot of required) {
-      const period = periods.find(
-        (p) => cursor >= p.startDate && (p.endDate === null || cursor <= p.endDate)
-      );
+      const period = findPeriodForDate(periods, cursor);
       if (!period) continue;
 
       const existing = allLogs.find(

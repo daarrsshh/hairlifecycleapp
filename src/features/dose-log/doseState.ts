@@ -75,6 +75,16 @@ function isPausedOnDate(periodId: string, date: DateString, pauseWindows: PauseW
   );
 }
 
+/** Which treatment period (if any) covered a given date — a past date can fall under a since-ended period. */
+export function findPeriodForDate<T extends TreatmentPeriodRange>(
+  periods: T[],
+  date: DateString
+): T | undefined {
+  return periods.find(
+    (p) => !isBefore(date, p.startDate) && (p.endDate === null || !isBefore(p.endDate, date))
+  );
+}
+
 /** Which slots (if any) a user was actually expected to log on a given date — empty before/after any period, or during a pause. */
 export function getRequiredSlots(
   date: DateString,
@@ -82,9 +92,7 @@ export function getRequiredSlots(
   pauseWindows: PauseWindow[],
   drugs: DrugSlotConfig[]
 ): DoseSlot[] {
-  const period = periods.find(
-    (p) => !isBefore(date, p.startDate) && (p.endDate === null || !isBefore(p.endDate, date))
-  );
+  const period = findPeriodForDate(periods, date);
   if (!period) return [];
   if (isPausedOnDate(period.id, date, pauseWindows)) return [];
 

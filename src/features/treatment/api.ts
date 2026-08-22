@@ -3,6 +3,7 @@ import { randomUUID } from 'expo-crypto';
 
 import { db } from '@/db/client';
 import { treatmentPausePeriods, treatmentPeriodDrugs, treatmentPeriods } from '@/db/schema';
+import { findPeriodForDate } from '@/features/dose-log/doseState';
 import type { PresetDrug } from '@/features/treatment/presets';
 import { today, type DateString } from '@/lib/date';
 
@@ -23,6 +24,12 @@ export async function getActiveTreatmentPeriod() {
 
 export async function getAllTreatmentPeriods() {
   return db.select().from(treatmentPeriods).orderBy(treatmentPeriods.startDate);
+}
+
+/** Which period covered a given (possibly past) date — for correcting a dose log on a day whose period has since ended or changed. */
+export async function getPeriodForDate(date: DateString) {
+  const periods = await getAllTreatmentPeriods();
+  return findPeriodForDate(periods, date) ?? null;
 }
 
 export async function getDrugsForPeriod(treatmentPeriodId: string) {

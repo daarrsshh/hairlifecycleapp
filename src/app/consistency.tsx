@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { ConsistencyHeatmap } from '@/features/consistency/components/consistency-heatmap';
+import { DayDetailCard } from '@/features/consistency/components/day-detail-card';
 import { useConsistencyStats } from '@/features/consistency/hooks';
 
 function slotPercent(taken: number, total: number): string {
@@ -13,6 +15,7 @@ function slotPercent(taken: number, total: number): string {
 
 export default function ConsistencyScreen() {
   const { data, isLoading } = useConsistencyStats();
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   if (isLoading || !data) {
     return <ThemedView style={styles.container} />;
@@ -44,8 +47,17 @@ export default function ConsistencyScreen() {
           <ThemedText themeColor="textSecondary" type="small" style={styles.heatmapLabel}>
             This month at a glance
           </ThemedText>
-          <ConsistencyHeatmap year={data.year} month={data.month} dayStatuses={data.monthDayStatuses} />
+          <ConsistencyHeatmap
+            year={data.year}
+            month={data.month}
+            dayStatuses={data.monthDayStatuses}
+            onSelectDate={setSelectedDate}
+          />
         </ThemedView>
+
+        {selectedDate ? (
+          <DayDetailCard date={selectedDate} onClose={() => setSelectedDate(null)} />
+        ) : null}
       </ScrollView>
     </ThemedView>
   );

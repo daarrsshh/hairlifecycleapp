@@ -34,6 +34,7 @@ export function useLogDose() {
       queryClient.invalidateQueries({ queryKey: ['doses'] });
       queryClient.invalidateQueries({ queryKey: ['streak'] });
       queryClient.invalidateQueries({ queryKey: ['consistency'] });
+      queryClient.invalidateQueries({ queryKey: ['dayDetail'] });
     },
   });
 }

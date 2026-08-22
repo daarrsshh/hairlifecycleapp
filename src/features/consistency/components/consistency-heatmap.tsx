@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -11,10 +11,12 @@ export function ConsistencyHeatmap({
   year,
   month,
   dayStatuses,
+  onSelectDate,
 }: {
   year: number;
   month: number; // 1-12
   dayStatuses: Record<string, DayStatus>;
+  onSelectDate?: (date: string) => void;
 }) {
   const theme = useTheme();
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -33,12 +35,18 @@ export function ConsistencyHeatmap({
   }
   for (let day = 1; day <= daysInMonth; day++) {
     const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const status = dayStatuses[date];
+    const disabled = status === undefined || status === 'no-treatment';
     cells.push(
-      <View key={date} style={[styles.cell, styles.dayCell, { backgroundColor: cellColor(dayStatuses[date]) }]}>
+      <Pressable
+        key={date}
+        disabled={disabled}
+        onPress={() => onSelectDate?.(date)}
+        style={[styles.cell, styles.dayCell, { backgroundColor: cellColor(dayStatuses[date]) }]}>
         <ThemedText type="small" style={styles.dayLabel}>
           {day}
         </ThemedText>
-      </View>
+      </Pressable>
     );
   }
 
