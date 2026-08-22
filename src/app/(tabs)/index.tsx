@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+import { Link } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -48,11 +49,15 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.header}>
           <ThemedText type="subtitle">Today</ThemedText>
-          {streak !== undefined && streak > 0 ? (
-            <ThemedView type="backgroundElement" style={styles.streakBadge}>
-              <ThemedText type="smallBold">🔥 {streak} day streak</ThemedText>
-            </ThemedView>
-          ) : null}
+          <Link href="/consistency" asChild>
+            <Pressable>
+              <ThemedView type="backgroundElement" style={styles.streakBadge}>
+                <ThemedText type="smallBold">
+                  {streak && streak > 0 ? `🔥 ${streak} day streak` : 'Consistency'}
+                </ThemedText>
+              </ThemedView>
+            </Pressable>
+          </Link>
         </ThemedView>
 
         {period.status === 'paused' ? (

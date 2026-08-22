@@ -29,6 +29,7 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(onboarding)" />
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="consistency" options={{ headerShown: true, title: 'Consistency' }} />
         </Stack>
       </ThemeProvider>
     </QueryClientProvider>
