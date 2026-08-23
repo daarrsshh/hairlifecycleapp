@@ -1,4 +1,5 @@
-import { Link } from 'expo-router';
+import { Link, Tabs } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
 
@@ -18,6 +19,18 @@ export default function LearnScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <Tabs.Screen
+        options={{
+          title: 'Learn',
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{ ios: 'book.fill', android: 'menu_book', web: 'menu_book' }}
+              size={22}
+              tintColor={color}
+            />
+          ),
+        }}
+      />
       <ScrollView contentContainerStyle={styles.content}>
         <TextInput
           value={query}

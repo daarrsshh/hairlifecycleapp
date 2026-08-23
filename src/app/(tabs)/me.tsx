@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'expo-router';
+import { Link, Tabs } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -48,6 +49,14 @@ export default function MeScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <Tabs.Screen
+        options={{
+          title: 'Me',
+          tabBarIcon: ({ color }) => (
+            <SymbolView name={{ ios: 'person.fill', android: 'person', web: 'person' }} size={22} tintColor={color} />
+          ),
+        }}
+      />
       <SafeAreaView style={styles.safeArea}>
         <ThemedText type="subtitle">Me</ThemedText>
 

@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Link } from 'expo-router';
+import { Link, Tabs } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,6 +19,19 @@ import { today } from '@/lib/date';
 
 const SLOT_LABEL: Record<DoseSlot, string> = { am: 'Morning', pm: 'Evening' };
 
+function HomeTabScreen() {
+  return (
+    <Tabs.Screen
+      options={{
+        title: 'Home',
+        tabBarIcon: ({ color }) => (
+          <SymbolView name={{ ios: 'house.fill', android: 'home', web: 'home' }} size={22} tintColor={color} />
+        ),
+      }}
+    />
+  );
+}
+
 export default function HomeScreen() {
   const { data, isLoading } = useTodayDoses();
   const { data: streak } = useCurrentStreak();
@@ -28,6 +42,7 @@ export default function HomeScreen() {
   if (isLoading || !data) {
     return (
       <ThemedView style={styles.container}>
+        <HomeTabScreen />
         <SafeAreaView style={styles.safeArea} />
       </ThemedView>
     );
@@ -39,6 +54,7 @@ export default function HomeScreen() {
   if (!period) {
     return (
       <ThemedView style={styles.container}>
+        <HomeTabScreen />
         <SafeAreaView style={styles.safeArea}>
           <ThemedText type="subtitle">No routine set up yet</ThemedText>
           <ThemedText themeColor="textSecondary">Head to the Routine tab to start one.</ThemedText>
@@ -49,6 +65,7 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <HomeTabScreen />
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.header}>
           <ThemedText type="subtitle">Today</ThemedText>
