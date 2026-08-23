@@ -16,7 +16,10 @@ import {
   computeCurrentStreak,
   computeItemConsistency,
   computeMonthRatio,
+  computeRangeRatio,
+  computeRecentDays,
   type DayStatusResolver,
+  type RecentDay,
 } from '@/features/consistency/streak';
 import { addDays, today } from '@/lib/date';
 
@@ -63,12 +66,31 @@ export async function loadConsistencyContext() {
   };
 }
 
-export function useCurrentStreak() {
+export interface WeeklyProgress {
+  days: RecentDay[];
+  currentStreak: number;
+  /** Days fully done vs. days that actually had something scheduled, over the last 7. */
+  completed: number;
+  total: number;
+}
+
+/**
+ * The compact week view on Home. Kept separate from `useConsistencyStats` so Home doesn't pay
+ * for the month heatmap and per-item breakdown it doesn't show.
+ */
+export function useWeeklyProgress() {
   return useQuery({
-    queryKey: ['streak', 'current'],
-    queryFn: async () => {
+    queryKey: ['streak', 'weekly'],
+    queryFn: async (): Promise<WeeklyProgress> => {
       const { dayStatus, currentDate, earliestStart } = await loadConsistencyContext();
-      return computeCurrentStreak(currentDate, dayStatus, earliestStart);
+      const weekStart = addDays(currentDate, -6);
+      const { completed, total } = computeRangeRatio(weekStart, currentDate, currentDate, dayStatus);
+      return {
+        days: computeRecentDays(currentDate, 7, dayStatus),
+        currentStreak: computeCurrentStreak(currentDate, dayStatus, earliestStart),
+        completed,
+        total,
+      };
     },
   });
 }

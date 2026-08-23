@@ -1,6 +1,12 @@
 import type { DayStatus } from '@/features/dose-log/doseState';
 
-import { computeBestStreak, computeCurrentStreak, computeMonthRatio, computeRangeRatio } from './streak';
+import {
+  computeBestStreak,
+  computeCurrentStreak,
+  computeMonthRatio,
+  computeRangeRatio,
+  computeRecentDays,
+} from './streak';
 
 function resolverFromMap(map: Record<string, DayStatus>, fallback: DayStatus = 'no-treatment') {
   return (date: string) => map[date] ?? fallback;
@@ -138,5 +144,26 @@ describe('computeRangeRatio', () => {
       completed: 2,
       total: 3,
     });
+  });
+});
+
+describe('computeRecentDays', () => {
+  it('returns the window oldest-first, ending on today', () => {
+    const status = resolverFromMap({});
+    const days = computeRecentDays('2026-08-24', 7, status);
+    expect(days).toHaveLength(7);
+    expect(days[0].date).toBe('2026-08-18');
+    expect(days[6].date).toBe('2026-08-24');
+  });
+
+  it('flags only today', () => {
+    const days = computeRecentDays('2026-08-24', 7, resolverFromMap({}));
+    expect(days.filter((d) => d.isToday).map((d) => d.date)).toEqual(['2026-08-24']);
+  });
+
+  it('carries each day’s resolved status', () => {
+    const status = resolverFromMap({ '2026-08-23': 'complete', '2026-08-24': 'in-progress' });
+    const days = computeRecentDays('2026-08-24', 3, status);
+    expect(days.map((d) => d.status)).toEqual(['no-treatment', 'complete', 'in-progress']);
   });
 });

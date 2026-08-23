@@ -3,6 +3,29 @@ import { addDays, isBefore, type DateString } from '@/lib/date';
 
 export type DayStatusResolver = (date: DateString) => DayStatus;
 
+export interface RecentDay {
+  date: DateString;
+  status: DayStatus;
+  isToday: boolean;
+}
+
+/**
+ * The last `days` days ending today, oldest first — backs Home's week strip. Bounded by
+ * construction, unlike the streak walk-back.
+ */
+export function computeRecentDays(
+  currentDate: DateString,
+  days: number,
+  dayStatus: DayStatusResolver
+): RecentDay[] {
+  const result: RecentDay[] = [];
+  for (let offset = days - 1; offset >= 0; offset--) {
+    const date = addDays(currentDate, -offset);
+    result.push({ date, status: dayStatus(date), isToday: offset === 0 });
+  }
+  return result;
+}
+
 /**
  * Current streak counts consecutive `complete` days walking back from today.
  * `no-treatment` days (before a plan started, or while paused) are skipped rather than

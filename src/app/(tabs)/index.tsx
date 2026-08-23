@@ -8,7 +8,8 @@ import { LinkButton } from '@/components/link-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { useCurrentStreak } from '@/features/consistency/hooks';
+import { useWeeklyProgress } from '@/features/consistency/hooks';
+import { WeekStrip } from '@/features/consistency/components/week-strip';
 import type { DoseState } from '@/features/dose-log/doseState';
 import { useLogDose, useTodayDoses, type TodayDose } from '@/features/dose-log/hooks';
 import { getAppSettings } from '@/features/onboarding/settings-api';
@@ -35,7 +36,7 @@ function HomeTabScreen() {
 export default function HomeScreen() {
   const theme = useTheme();
   const { data, isLoading } = useTodayDoses();
-  const { data: streak } = useCurrentStreak();
+  const { data: weekly } = useWeeklyProgress();
   const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: getAppSettings });
   const logDose = useLogDose();
   const queryClient = useQueryClient();
@@ -77,13 +78,27 @@ export default function HomeScreen() {
             ) : null}
           </ThemedView>
           <LinkButton href="/consistency">
-              <ThemedView type="backgroundElement" style={styles.streakBadge}>
-                <ThemedText type="smallBold">
-                  {streak && streak > 0 ? `🔥 ${streak} day streak` : 'Consistency'}
-                </ThemedText>
-              </ThemedView>
-            </LinkButton>
+            <ThemedView type="backgroundElement" style={styles.streakBadge}>
+              <ThemedText type="smallBold">
+                {weekly && weekly.currentStreak > 0 ? `🔥 ${weekly.currentStreak} day streak` : 'Consistency'}
+              </ThemedText>
+            </ThemedView>
+          </LinkButton>
         </ThemedView>
+
+        {/* A compact week at a glance. Kept above the checklist because it's one short row —
+            anything larger would push today's actual doses down the screen. */}
+        {weekly ? (
+          <LinkButton href="/consistency" style={[styles.weekCard, { borderColor: theme.border }]}>
+            <ThemedView style={styles.weekHeader}>
+              <ThemedText type="smallBold">This week</ThemedText>
+              <ThemedText themeColor="textSecondary" type="small">
+                {weekly.total === 0 ? 'Nothing due yet' : `${weekly.completed} of ${weekly.total} days`}
+              </ThemedText>
+            </ThemedView>
+            <WeekStrip days={weekly.days} />
+          </LinkButton>
+        ) : null}
 
         {routine.status === 'paused' ? (
           <ThemedView type="backgroundElement" style={styles.banner}>
@@ -203,6 +218,14 @@ const styles = StyleSheet.create({
   content: { padding: Spacing.four, gap: Spacing.three },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   streakBadge: { paddingVertical: Spacing.one, paddingHorizontal: Spacing.three, borderRadius: Spacing.four },
+  weekCard: {
+    borderWidth: 1,
+    borderRadius: Spacing.three,
+    padding: Spacing.three,
+    gap: Spacing.two,
+    alignSelf: 'stretch',
+  },
+  weekHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   banner: {
     flexDirection: 'row',
     justifyContent: 'space-between',
