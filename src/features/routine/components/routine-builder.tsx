@@ -1,8 +1,8 @@
-import { Link } from 'expo-router';
 import { type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 
+import { LinkButton } from '@/components/link-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -64,11 +64,9 @@ export function RoutineBuilder({
             </ThemedView>
 
             <ThemedView type="backgroundElement" style={styles.cardActions}>
-              <Link href={{ pathname: '/routine/item', params: { index: String(index) } }} asChild>
-                <Pressable>
-                  <ThemedText type="linkPrimary">Edit</ThemedText>
-                </Pressable>
-              </Link>
+              <LinkButton href={{ pathname: '/routine/item', params: { index: String(index) } }}>
+                <ThemedText type="linkPrimary">Edit</ThemedText>
+              </LinkButton>
               <Pressable onPress={() => removeItem(index)}>
                 <ThemedText themeColor="textSecondary" type="small">
                   Remove
@@ -78,13 +76,11 @@ export function RoutineBuilder({
           </ThemedView>
         ))}
 
-        <Link href="/routine/item" asChild>
-          <Pressable style={[styles.addButton, { borderColor: theme.primary }]}>
-            <ThemedText style={{ color: theme.primary }} type="smallBold">
-              + Add {items.length === 0 ? 'your first item' : 'another item'}
-            </ThemedText>
-          </Pressable>
-        </Link>
+        <LinkButton href="/routine/item" style={[styles.addButton, { borderColor: theme.primary }]}>
+          <ThemedText style={{ color: theme.primary }} type="smallBold">
+            + Add {items.length === 0 ? 'your first item' : 'another item'}
+          </ThemedText>
+        </LinkButton>
 
         {footer}
       </ScrollView>

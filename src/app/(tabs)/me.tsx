@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
+import { LinkButton } from '@/components/link-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -59,19 +60,15 @@ export default function MeScreen() {
             <ThemedText themeColor="textSecondary" type="small">
               Reminder times come from each item&apos;s own schedule — edit them in your routine.
             </ThemedText>
-            <Link href="/routine/new" asChild>
-              <Pressable>
+            <LinkButton href="/routine/new">
                 <ThemedText type="linkPrimary">Edit routine &amp; reminder times</ThemedText>
-              </Pressable>
-            </Link>
+              </LinkButton>
           </ThemedView>
         ) : null}
 
-        <Link href="/export" asChild>
-          <Pressable>
+        <LinkButton href="/export">
             <ThemedText type="linkPrimary">Export data (PDF)</ThemedText>
-          </Pressable>
-        </Link>
+          </LinkButton>
       </ScrollView>
     </ThemedView>
   );

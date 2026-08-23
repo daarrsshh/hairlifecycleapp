@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
+import { LinkButton } from '@/components/link-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -91,23 +92,17 @@ export default function RoutineScreen() {
         ) : null}
 
         <ThemedView style={styles.links}>
-          <Link href="/routine/weekly" asChild>
-            <Pressable>
+          <LinkButton href="/routine/weekly">
               <ThemedText type="linkPrimary">View your week</ThemedText>
-            </Pressable>
-          </Link>
-          <Link href="/routine/new" asChild>
-            <Pressable>
+            </LinkButton>
+          <LinkButton href="/routine/new">
               <ThemedText type="linkPrimary">
                 {routine ? 'Start new routine' : 'Set up your routine'}
               </ThemedText>
-            </Pressable>
-          </Link>
-          <Link href="/timeline" asChild>
-            <Pressable>
+            </LinkButton>
+          <LinkButton href="/timeline">
               <ThemedText type="linkPrimary">View timeline</ThemedText>
-            </Pressable>
-          </Link>
+            </LinkButton>
         </ThemedView>
       </ScrollView>
     </ThemedView>

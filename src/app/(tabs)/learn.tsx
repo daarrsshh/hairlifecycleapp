@@ -1,8 +1,9 @@
-import { Link, Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { ScrollView, StyleSheet, TextInput } from 'react-native';
 
+import { LinkButton } from '@/components/link-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -48,11 +49,12 @@ export default function LearnScreen() {
               <ThemedView key={category} style={styles.section}>
                 <ThemedText type="smallBold">{category}</ThemedText>
                 {ARTICLES.filter((a) => a.category === category).map((article) => (
-                  <Link key={article.id} href={`/learn/${article.id}`} asChild>
-                    <Pressable style={StyleSheet.flatten([styles.row, { borderColor: theme.border }])}>
-                      <ThemedText>{article.title}</ThemedText>
-                    </Pressable>
-                  </Link>
+                  <LinkButton
+                    key={article.id}
+                    href={`/learn/${article.id}`}
+                    style={[styles.row, { borderColor: theme.border }]}>
+                    <ThemedText>{article.title}</ThemedText>
+                  </LinkButton>
                 ))}
               </ThemedView>
             ))}
@@ -87,14 +89,15 @@ function SearchResults({ articleIds, faqIds }: { articleIds: string[]; faqIds: s
   return (
     <ThemedView style={styles.section}>
       {articles.map((article) => (
-        <Link key={article.id} href={`/learn/${article.id}`} asChild>
-          <Pressable style={[styles.row, { borderColor: theme.border }]}>
-            <ThemedText>{article.title}</ThemedText>
-            <ThemedText themeColor="textSecondary" type="small">
-              {article.category}
-            </ThemedText>
-          </Pressable>
-        </Link>
+        <LinkButton
+          key={article.id}
+          href={`/learn/${article.id}`}
+          style={[styles.row, { borderColor: theme.border }]}>
+          <ThemedText>{article.title}</ThemedText>
+          <ThemedText themeColor="textSecondary" type="small">
+            {article.category}
+          </ThemedText>
+        </LinkButton>
       ))}
       {faq.map((entry) => (
         <ThemedView key={entry.id} type="backgroundElement" style={styles.faqCard}>

@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Link, Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
+import { LinkButton } from '@/components/link-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -75,15 +76,13 @@ export default function HomeScreen() {
               </ThemedText>
             ) : null}
           </ThemedView>
-          <Link href="/consistency" asChild>
-            <Pressable>
+          <LinkButton href="/consistency">
               <ThemedView type="backgroundElement" style={styles.streakBadge}>
                 <ThemedText type="smallBold">
                   {streak && streak > 0 ? `🔥 ${streak} day streak` : 'Consistency'}
                 </ThemedText>
               </ThemedView>
-            </Pressable>
-          </Link>
+            </LinkButton>
         </ThemedView>
 
         {routine.status === 'paused' ? (
@@ -101,14 +100,12 @@ export default function HomeScreen() {
 
         {settings &&
         isPhotoReminderDue(settings.lastPhotoSetDate, currentDate, settings.photoReminderIntervalDays) ? (
-          <Link href="/photos/capture" asChild>
-            <Pressable>
+          <LinkButton href="/photos/capture">
               <ThemedView type="backgroundElement" style={styles.banner}>
                 <ThemedText type="smallBold">Time for new photos</ThemedText>
                 <ThemedText type="linkPrimary">Add photos</ThemedText>
               </ThemedView>
-            </Pressable>
-          </Link>
+            </LinkButton>
         ) : null}
 
         {timeBlocks.length === 0 && routine.status !== 'paused' ? (
