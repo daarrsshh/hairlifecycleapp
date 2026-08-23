@@ -2,27 +2,32 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 
 import { LinkButton } from '@/components/link-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { getAllPhotos } from '@/features/photos/api';
+import { describeSetCoverage, describeSetTiming, groupPhotosIntoSets } from '@/features/photos/photo-sets';
+import { getAllRoutines } from '@/features/routine/api';
 import { useTheme } from '@/hooks/use-theme';
-
-const ANGLE_LABEL: Record<string, string> = {
-  crown: 'Crown',
-  hairline: 'Hairline',
-  left_temple: 'Left temple',
-  right_temple: 'Right temple',
-};
 
 export default function PhotosScreen() {
   const theme = useTheme();
-  const { data: photos, isLoading } = useQuery({ queryKey: ['photos', 'all'], queryFn: getAllPhotos });
+  const { data, isLoading } = useQuery({
+    queryKey: ['photos', 'sets'],
+    queryFn: async () => {
+      const [photos, routines] = await Promise.all([getAllPhotos(), getAllRoutines()]);
+      const startDate = routines.reduce<string | null>(
+        (min, r) => (min === null || r.startDate < min ? r.startDate : min),
+        null
+      );
+      return groupPhotosIntoSets(photos, startDate);
+    },
+  });
 
-  const sorted = [...(photos ?? [])].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const sets = data ?? [];
 
   return (
     <ThemedView style={styles.container}>
@@ -52,20 +57,39 @@ export default function PhotosScreen() {
           </LinkButton>
         </ThemedView>
 
-        {!isLoading && sorted.length === 0 ? (
-          <ThemedText themeColor="textSecondary">No photos yet — add your first set.</ThemedText>
+        {!isLoading && sets.length === 0 ? (
+          <ThemedView type="backgroundElement" style={styles.empty}>
+            <ThemedText type="smallBold">No photos yet</ThemedText>
+            <ThemedText themeColor="textSecondary" type="small">
+              Add your first set to start tracking progress — four angles takes about a minute.
+            </ThemedText>
+          </ThemedView>
         ) : null}
 
-        <View style={styles.grid}>
-          {sorted.map((photo) => (
-            <View key={photo.id} style={styles.gridItem}>
-              <Image source={{ uri: photo.filePath }} style={styles.thumbnail} contentFit="cover" />
-              <ThemedText type="small" themeColor="textSecondary">
-                {ANGLE_LABEL[photo.angle] ?? photo.angle} · {photo.date}
+        {/* One card per capture session rather than one per photo, so the list stays readable
+            as sets accumulate. Tapping opens all the angles from that day. */}
+        {sets.map((set) => (
+          <LinkButton
+            key={set.date}
+            href={{ pathname: '/photos/set', params: { date: set.date } }}
+            style={[styles.setCard, { borderColor: theme.border }]}>
+            <Image source={{ uri: set.coverPhoto.filePath }} style={styles.cover} contentFit="cover" />
+            <ThemedView style={styles.setText}>
+              <ThemedText type="smallBold">{describeSetTiming(set)}</ThemedText>
+              <ThemedText themeColor="textSecondary" type="small">
+                {set.date}
               </ThemedText>
-            </View>
-          ))}
-        </View>
+              <ThemedText themeColor="textSecondary" type="small">
+                {describeSetCoverage(set)}
+              </ThemedText>
+            </ThemedView>
+            <SymbolView
+              name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+              size={18}
+              tintColor={theme.textSecondary}
+            />
+          </LinkButton>
+        ))}
       </ScrollView>
     </ThemedView>
   );
@@ -81,7 +105,15 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     alignItems: 'center',
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  gridItem: { width: '47%', gap: Spacing.half },
-  thumbnail: { width: '100%', aspectRatio: 1, borderRadius: Spacing.two },
+  empty: { padding: Spacing.four, borderRadius: Spacing.three, gap: Spacing.one },
+  setCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    borderWidth: 1,
+    borderRadius: Spacing.three,
+    padding: Spacing.two,
+  },
+  cover: { width: 72, height: 72, borderRadius: Spacing.two },
+  setText: { flex: 1, gap: 2 },
 });
