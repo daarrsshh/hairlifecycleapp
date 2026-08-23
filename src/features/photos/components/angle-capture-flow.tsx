@@ -74,23 +74,30 @@ export function AngleCaptureFlow({
         </ThemedText>
 
         <ThemedView style={styles.grid}>
-          {CAPTURE_ANGLES.map((angle) => (
-            <Pressable
-              key={angle.value}
-              onPress={() => setActiveAngle(angle.value)}
-              style={[styles.angleCard, { borderColor: theme.border }]}>
-              {captured[angle.value] ? (
-                <Image source={{ uri: captured[angle.value] }} style={StyleSheet.absoluteFill} />
-              ) : (
-                <ThemedText themeColor="textSecondary" type="small">
-                  Tap to add
-                </ThemedText>
-              )}
-              <ThemedText type="small" style={styles.angleLabel}>
-                {angle.label}
-              </ThemedText>
-            </Pressable>
-          ))}
+          {CAPTURE_ANGLES.map((angle) => {
+            const uri = captured[angle.value];
+            return (
+              // The label sits below the tile rather than on top of it — overlaying it on a
+              // square this small collided with the "Tap to add" placeholder.
+              <ThemedView key={angle.value} style={styles.gridItem}>
+                <Pressable
+                  onPress={() => setActiveAngle(angle.value)}
+                  style={[styles.angleCard, { borderColor: theme.border }]}>
+                  {uri ? (
+                    <Image source={{ uri }} style={StyleSheet.absoluteFill} />
+                  ) : (
+                    <ThemedText themeColor="textSecondary" type="small">
+                      Tap to add
+                    </ThemedText>
+                  )}
+                </Pressable>
+                <ThemedView style={styles.labelRow}>
+                  <ThemedText type="small">{angle.label}</ThemedText>
+                  {uri ? <ThemedText style={{ color: theme.taken }}>✓</ThemedText> : null}
+                </ThemedView>
+              </ThemedView>
+            );
+          })}
         </ThemedView>
 
         <ThemedView style={styles.footer}>
@@ -118,8 +125,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, paddingTop: Spacing.three },
+  gridItem: { width: '47%', gap: Spacing.one },
   angleCard: {
-    width: '47%',
+    width: '100%',
     aspectRatio: 1,
     borderWidth: 1,
     borderRadius: Spacing.three,
@@ -127,7 +135,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  angleLabel: { position: 'absolute', bottom: Spacing.one },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   footer: { gap: Spacing.two, alignItems: 'center' },
   button: {
     alignSelf: 'stretch',

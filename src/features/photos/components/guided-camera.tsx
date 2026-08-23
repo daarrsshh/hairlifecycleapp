@@ -1,5 +1,6 @@
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useRef } from 'react';
+import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
+import { SymbolView } from 'expo-symbols';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -20,6 +21,8 @@ export function GuidedCamera({
 }) {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
+  // Hairline and temple shots are usually easier facing yourself; crown usually isn't.
+  const [facing, setFacing] = useState<CameraType>('back');
 
   if (!permission) return null;
 
@@ -46,22 +49,40 @@ export function GuidedCamera({
 
   return (
     <View style={styles.container}>
-      <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
+      <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={facing} />
       <GuidedCameraOverlay angle={angle} />
 
       <View style={styles.topBar}>
-        <Pressable onPress={onCancel}>
-          <ThemedText style={styles.cancelText}>Cancel</ThemedText>
+        <Pressable onPress={onCancel} hitSlop={12}>
+          <ThemedText style={styles.overlayText}>Cancel</ThemedText>
         </Pressable>
-        <Pressable onPress={onPickFromLibrary}>
-          <ThemedText style={styles.cancelText}>Choose from library</ThemedText>
+        <Pressable onPress={onPickFromLibrary} hitSlop={12}>
+          <ThemedText style={styles.overlayText}>Choose from library</ThemedText>
         </Pressable>
       </View>
 
       <View style={styles.controls}>
-        <Pressable onPress={capture} style={styles.shutterOuter}>
+        <View style={styles.controlSide} />
+        <Pressable onPress={capture} style={styles.shutterOuter} accessibilityLabel="Take photo">
           <View style={styles.shutterInner} />
         </Pressable>
+        <View style={styles.controlSide}>
+          <Pressable
+            onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+            hitSlop={12}
+            accessibilityLabel="Flip camera"
+            style={styles.flipButton}>
+            <SymbolView
+              name={{
+                ios: 'arrow.triangle.2.circlepath.camera',
+                android: 'flip_camera_android',
+                web: 'flip_camera_android',
+              }}
+              size={26}
+              tintColor="#fff"
+            />
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -91,9 +112,22 @@ const styles = StyleSheet.create({
     bottom: 40,
     left: 0,
     right: 0,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 32,
   },
-  cancelText: { color: '#fff' },
+  // Equal-width flanks keep the shutter centred with only one side occupied.
+  controlSide: { width: 56, alignItems: 'center' },
+  flipButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  overlayText: { color: '#fff' },
   shutterOuter: {
     width: 72,
     height: 72,
