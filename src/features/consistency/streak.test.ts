@@ -6,6 +6,46 @@ function resolverFromMap(map: Record<string, DayStatus>, fallback: DayStatus = '
   return (date: string) => map[date] ?? fallback;
 }
 
+/**
+ * Wraps a resolver so a runaway walk-back fails the test instead of hanging the suite
+ * forever — which is exactly what this function used to do on-device (see the
+ * "terminates" tests below).
+ */
+function boundedResolver(inner: (date: string) => DayStatus, maxCalls = 5000) {
+  let calls = 0;
+  return (date: string) => {
+    if (++calls > maxCalls) {
+      throw new Error(`computeCurrentStreak walked back ${maxCalls}+ days — infinite loop`);
+    }
+    return inner(date);
+  };
+}
+
+describe('computeCurrentStreak termination', () => {
+  // Every other test in this file happens to include an `incomplete` day, which is the only
+  // condition that used to break the loop — so they all passed while the app hard-froze
+  // on real data. These cover the cases that have no `incomplete` day at all.
+  it('terminates when every logged day is complete (walks back past the treatment start)', () => {
+    const status = boundedResolver(resolverFromMap({ '2026-08-22': 'complete' }));
+    expect(computeCurrentStreak('2026-08-22', status, '2026-08-22')).toBe(1);
+  });
+
+  it('terminates on day one when today is still in-progress and nothing precedes it', () => {
+    const status = boundedResolver(resolverFromMap({ '2026-08-22': 'in-progress' }));
+    expect(computeCurrentStreak('2026-08-22', status, '2026-08-22')).toBe(0);
+  });
+
+  it('terminates when the whole history is a pause (all no-treatment)', () => {
+    const status = boundedResolver(resolverFromMap({}));
+    expect(computeCurrentStreak('2026-08-22', status, '2026-08-01')).toBe(0);
+  });
+
+  it('is zero when there is no treatment history at all', () => {
+    const status = boundedResolver(resolverFromMap({}));
+    expect(computeCurrentStreak('2026-08-22', status, null)).toBe(0);
+  });
+});
+
 describe('computeCurrentStreak', () => {
   it('counts consecutive complete days walking back from today', () => {
     const status = resolverFromMap({
@@ -14,12 +54,12 @@ describe('computeCurrentStreak', () => {
       '2026-08-20': 'complete',
       '2026-08-19': 'incomplete',
     });
-    expect(computeCurrentStreak('2026-08-22', status)).toBe(3);
+    expect(computeCurrentStreak('2026-08-22', status, '2026-08-01')).toBe(3);
   });
 
   it('is zero when today is already resolved as incomplete', () => {
     const status = resolverFromMap({ '2026-08-22': 'incomplete' });
-    expect(computeCurrentStreak('2026-08-22', status)).toBe(0);
+    expect(computeCurrentStreak('2026-08-22', status, '2026-08-01')).toBe(0);
   });
 
   it('does not zero the streak while today is still in-progress', () => {
@@ -29,7 +69,7 @@ describe('computeCurrentStreak', () => {
       '2026-08-20': 'complete',
       '2026-08-19': 'incomplete',
     });
-    expect(computeCurrentStreak('2026-08-22', status)).toBe(2);
+    expect(computeCurrentStreak('2026-08-22', status, '2026-08-01')).toBe(2);
   });
 
   it('does not break the streak across a paused (no-treatment) gap', () => {
@@ -40,7 +80,7 @@ describe('computeCurrentStreak', () => {
       '2026-08-19': 'complete',
       '2026-08-18': 'incomplete',
     });
-    expect(computeCurrentStreak('2026-08-22', status)).toBe(2);
+    expect(computeCurrentStreak('2026-08-22', status, '2026-08-01')).toBe(2);
   });
 });
 

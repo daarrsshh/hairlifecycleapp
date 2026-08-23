@@ -52,8 +52,8 @@ export function useCurrentStreak() {
   return useQuery({
     queryKey: ['streak', 'current'],
     queryFn: async () => {
-      const { dayStatus, currentDate } = await loadConsistencyContext();
-      return computeCurrentStreak(currentDate, dayStatus);
+      const { dayStatus, currentDate, earliestStart } = await loadConsistencyContext();
+      return computeCurrentStreak(currentDate, dayStatus, earliestStart);
     },
   });
 }
@@ -77,7 +77,7 @@ export function useConsistencyStats() {
       const [year, month] = ctx.currentDate.split('-').map(Number);
       const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
 
-      const currentStreak = computeCurrentStreak(ctx.currentDate, ctx.dayStatus);
+      const currentStreak = computeCurrentStreak(ctx.currentDate, ctx.dayStatus, ctx.earliestStart);
       const bestStreak = ctx.earliestStart
         ? computeBestStreak(ctx.earliestStart, ctx.currentDate, ctx.dayStatus)
         : 0;

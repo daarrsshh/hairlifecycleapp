@@ -5,9 +5,9 @@ import { useTheme } from '@/hooks/use-theme';
 export default function TabsLayout() {
   const theme = useTheme();
 
-  // Deliberately no <Tabs.Screen> children here — same reason the root Stack has none: on this
-  // Expo Go build, declaring several route-registration children up front hangs native mounting.
-  // Each tab screen sets its own icon/title via an inline <Tabs.Screen options={{...}} />.
+  // No <Tabs.Screen> children here — each tab screen declares its own title/icon via an inline
+  // <Tabs.Screen options={{...}} />, mirroring how the root Stack works. (Unlike the root Stack,
+  // there's no known on-device bug forcing this here; it's just kept consistent with it.)
   return (
     <Tabs
       screenOptions={{

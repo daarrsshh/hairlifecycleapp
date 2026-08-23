@@ -9,13 +9,25 @@ export type DayStatusResolver = (date: DateString) => DayStatus;
  * breaking the streak — pausing freezes progress, it doesn't punish it (PRD §9).
  * If today is still `in-progress`, it's skipped too — an unfinished today shouldn't zero
  * out yesterday's streak while there's still time left to log.
+ *
+ * `earliestDate` (the first treatment period's start date, or null if there's no treatment
+ * history) is a **required** lower bound, not an optimization: every date before it resolves
+ * to `no-treatment`, which this loop skips past rather than breaking on. Without the bound the
+ * walk-back never terminates for any user who has no `incomplete` day — a hard JS-thread
+ * freeze that presents as a permanently black, totally unresponsive app.
  */
-export function computeCurrentStreak(currentDate: DateString, dayStatus: DayStatusResolver): number {
+export function computeCurrentStreak(
+  currentDate: DateString,
+  dayStatus: DayStatusResolver,
+  earliestDate: DateString | null
+): number {
+  if (earliestDate === null) return 0;
+
   let streak = 0;
   let cursor = currentDate;
   let isToday = true;
 
-  while (true) {
+  while (!isBefore(cursor, earliestDate)) {
     const status = dayStatus(cursor);
     if (status === 'no-treatment' || (status === 'in-progress' && isToday)) {
       cursor = addDays(cursor, -1);

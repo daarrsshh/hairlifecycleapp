@@ -22,7 +22,7 @@ export async function generateAndShareExport(options: {
   );
 
   const { completed, total } = computeRangeRatio(fromDate, toDate, ctx.currentDate, ctx.dayStatus);
-  const currentStreak = computeCurrentStreak(ctx.currentDate, ctx.dayStatus);
+  const currentStreak = computeCurrentStreak(ctx.currentDate, ctx.dayStatus, ctx.earliestStart);
   const bestStreakInRange = computeBestStreak(fromDate, toDate, ctx.dayStatus);
 
   let photoGroups: ExportPhotoGroup[] | null = null;
