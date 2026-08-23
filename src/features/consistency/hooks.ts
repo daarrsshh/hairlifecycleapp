@@ -5,23 +5,23 @@ import { doseLogs } from '@/db/schema';
 import { loadDosingContext } from '@/features/dose-log/api';
 import {
   computeEffectiveState,
-  getRequiredSlots,
-  resolveDayStatus,
+  getScheduledDoses,
+  resolveDayProgress,
   type DayStatus,
   type DoseLogRecord,
-  type DoseSlot,
+  type ScheduledDose,
 } from '@/features/dose-log/doseState';
 import {
   computeBestStreak,
   computeCurrentStreak,
+  computeItemConsistency,
   computeMonthRatio,
-  computeSlotBreakdown,
   type DayStatusResolver,
 } from '@/features/consistency/streak';
-import { today } from '@/lib/date';
+import { addDays, today } from '@/lib/date';
 
 export async function loadConsistencyContext() {
-  const { periods, drugs, pauseWindows } = await loadDosingContext();
+  const { routines, items, pauseWindows } = await loadDosingContext();
   const allLogs = await db.select().from(doseLogs);
   const currentDate = today();
 
@@ -32,20 +32,35 @@ export async function loadConsistencyContext() {
     logsByDate.set(log.date, list);
   }
 
-  const requiredSlotsFor = (date: string) => getRequiredSlots(date, periods, pauseWindows, drugs);
-  const dayStatus: DayStatusResolver = (date) =>
-    resolveDayStatus(date, requiredSlotsFor(date), logsByDate.get(date) ?? [], currentDate);
-  const effectiveStateFor = (date: string, slot: DoseSlot) => {
-    const log = (logsByDate.get(date) ?? []).find((l) => l.slot === slot);
+  const scheduledFor = (date: string): ScheduledDose[] =>
+    getScheduledDoses(date, routines, pauseWindows, items);
+
+  const dayProgressFor = (date: string) =>
+    resolveDayProgress(date, scheduledFor(date), logsByDate.get(date) ?? [], currentDate);
+
+  const dayStatus: DayStatusResolver = (date) => dayProgressFor(date).status;
+
+  const effectiveStateFor = (date: string, itemId: string, time: string) => {
+    const log = (logsByDate.get(date) ?? []).find(
+      (l) => l.routineItemId === itemId && l.time === time
+    );
     return computeEffectiveState(log, date, currentDate);
   };
 
-  const earliestStart = periods.reduce<string | null>(
-    (min, p) => (min === null || p.startDate < min ? p.startDate : min),
+  const earliestStart = routines.reduce<string | null>(
+    (min, r) => (min === null || r.startDate < min ? r.startDate : min),
     null
   );
 
-  return { dayStatus, requiredSlotsFor, effectiveStateFor, earliestStart, currentDate };
+  return {
+    dayStatus,
+    dayProgressFor,
+    scheduledFor,
+    effectiveStateFor,
+    earliestStart,
+    currentDate,
+    items,
+  };
 }
 
 export function useCurrentStreak() {
@@ -58,12 +73,19 @@ export function useCurrentStreak() {
   });
 }
 
+export interface ItemConsistencyRow {
+  itemId: string;
+  name: string;
+  taken: number;
+  total: number;
+}
+
 export interface ConsistencyStats {
   currentStreak: number;
   bestStreak: number;
   monthRatio: { completed: number; total: number };
-  am: { taken: number; total: number };
-  pm: { taken: number; total: number };
+  /** Per-item, over the last 7 days — "LLLT: 3 of 3 this week". */
+  itemsThisWeek: ItemConsistencyRow[];
   monthDayStatuses: Record<string, DayStatus>;
   year: number;
   month: number; // 1-12
@@ -75,29 +97,26 @@ export function useConsistencyStats() {
     queryFn: async (): Promise<ConsistencyStats> => {
       const ctx = await loadConsistencyContext();
       const [year, month] = ctx.currentDate.split('-').map(Number);
-      const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
 
       const currentStreak = computeCurrentStreak(ctx.currentDate, ctx.dayStatus, ctx.earliestStart);
       const bestStreak = ctx.earliestStart
         ? computeBestStreak(ctx.earliestStart, ctx.currentDate, ctx.dayStatus)
         : 0;
       const monthRatio = computeMonthRatio(year, month, ctx.currentDate, ctx.dayStatus);
-      const am = computeSlotBreakdown(
-        monthStart,
-        ctx.currentDate,
-        'am',
-        ctx.currentDate,
-        ctx.requiredSlotsFor,
-        ctx.effectiveStateFor
-      );
-      const pm = computeSlotBreakdown(
-        monthStart,
-        ctx.currentDate,
-        'pm',
-        ctx.currentDate,
-        ctx.requiredSlotsFor,
-        ctx.effectiveStateFor
-      );
+
+      const weekStart = addDays(ctx.currentDate, -6);
+      const itemsThisWeek = ctx.items.map((item) => ({
+        itemId: item.id,
+        name: item.name,
+        ...computeItemConsistency(
+          weekStart,
+          ctx.currentDate,
+          item.id,
+          ctx.currentDate,
+          ctx.scheduledFor,
+          ctx.effectiveStateFor
+        ),
+      }));
 
       const daysInMonth = new Date(year, month, 0).getDate();
       const monthDayStatuses: Record<string, DayStatus> = {};
@@ -107,7 +126,7 @@ export function useConsistencyStats() {
         monthDayStatuses[date] = ctx.dayStatus(date);
       }
 
-      return { currentStreak, bestStreak, monthRatio, am, pm, monthDayStatuses, year, month };
+      return { currentStreak, bestStreak, monthRatio, itemsThisWeek, monthDayStatuses, year, month };
     },
   });
 }

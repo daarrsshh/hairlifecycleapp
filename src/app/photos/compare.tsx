@@ -102,7 +102,7 @@ export default function ComparePhotosScreen() {
               <ThemedView style={styles.comparison}>
                 <ThemedText themeColor="textSecondary" type="small">
                   {Math.abs(daysBetween(from.date, to.date))} days apart
-                  {from.treatmentPeriodId !== to.treatmentPeriodId ? ' · treatment changed in between' : ''}
+                  {from.routineId !== to.routineId ? ' · treatment changed in between' : ''}
                 </ThemedText>
                 <ComparisonSlider
                   beforeUri={from.filePath}

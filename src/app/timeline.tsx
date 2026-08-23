@@ -7,10 +7,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { buildTimeline, type TimelineEvent } from '@/features/timeline/build-timeline';
-import { describeTreatment } from '@/features/treatment/describe';
-import { getAllPauseWindows, getAllTreatmentPeriods } from '@/features/treatment/api';
-import { db } from '@/db/client';
-import { treatmentPeriodDrugs } from '@/db/schema';
+import { describeRoutine } from '@/features/routine/describe';
+import { getAllPauseWindows, getAllRoutineItems, getAllRoutines } from '@/features/routine/api';
 import { getAllPhotos } from '@/features/photos/api';
 
 const ANGLE_LABEL: Record<string, string> = {
@@ -24,13 +22,13 @@ export default function TimelineScreen() {
   const { data, isLoading } = useQuery({
     queryKey: ['timeline'],
     queryFn: async () => {
-      const [periods, drugs, pauseWindows, photos] = await Promise.all([
-        getAllTreatmentPeriods(),
-        db.select().from(treatmentPeriodDrugs),
+      const [routines, items, pauseWindows, photos] = await Promise.all([
+        getAllRoutines(),
+        getAllRoutineItems(),
         getAllPauseWindows(),
         getAllPhotos(),
       ]);
-      return buildTimeline(periods, drugs, pauseWindows, photos, describeTreatment);
+      return buildTimeline(routines, items, pauseWindows, photos, describeRoutine);
     },
   });
 
@@ -65,11 +63,11 @@ function TimelineRow({ event }: { event: TimelineEvent }) {
 
 function summarize(event: TimelineEvent): string {
   switch (event.type) {
-    case 'treatment-started':
+    case 'routine-started':
       return `Started ${event.label}`;
-    case 'treatment-paused':
+    case 'routine-paused':
       return 'Paused';
-    case 'treatment-resumed':
+    case 'routine-resumed':
       return 'Resumed';
     case 'photos':
       return `Photos added (${event.angles.length})`;
@@ -78,8 +76,8 @@ function summarize(event: TimelineEvent): string {
 
 function detail(event: TimelineEvent): string {
   switch (event.type) {
-    case 'treatment-started':
-      return event.drugNames.join(', ');
+    case 'routine-started':
+      return event.itemNames.join(', ');
     case 'photos':
       return event.angles.map((a) => ANGLE_LABEL[a] ?? a).join(', ');
     default:

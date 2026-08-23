@@ -1,32 +1,48 @@
 import {
   computeEffectiveState,
   computeRepromptTime,
-  getRequiredSlots,
+  dayOfWeek,
+  getScheduledDoses,
+  resolveDayProgress,
   resolveDayStatus,
   type DoseLogRecord,
+  type RoutineItemSchedule,
 } from './doseState';
+
+const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
+
+function log(overrides: Partial<DoseLogRecord> & Pick<DoseLogRecord, 'routineItemId' | 'time'>): DoseLogRecord {
+  return {
+    date: '2026-08-20',
+    state: 'taken',
+    locked: true,
+    respondedAt: 'x',
+    ...overrides,
+  };
+}
+
+function item(overrides: Partial<RoutineItemSchedule> & Pick<RoutineItemSchedule, 'id'>): RoutineItemSchedule {
+  return {
+    routineId: 'r1',
+    type: 'topical',
+    name: 'Minoxidil',
+    dosage: null,
+    daysOfWeek: EVERY_DAY,
+    times: ['08:00'],
+    ...overrides,
+  };
+}
 
 describe('computeEffectiveState', () => {
   it('returns the stored state when a log exists and is not stale pending', () => {
-    const log: DoseLogRecord = {
-      date: '2026-08-20',
-      slot: 'am',
-      state: 'taken',
-      locked: true,
-      respondedAt: '2026-08-20T08:00:00',
-    };
-    expect(computeEffectiveState(log, '2026-08-20', '2026-08-22')).toBe('taken');
+    expect(computeEffectiveState(log({ routineItemId: 'a', time: '08:00' }), '2026-08-20', '2026-08-22')).toBe(
+      'taken'
+    );
   });
 
   it('treats a stale pending log from a past day as missed, without mutating it', () => {
-    const log: DoseLogRecord = {
-      date: '2026-08-20',
-      slot: 'am',
-      state: 'pending',
-      locked: false,
-      respondedAt: null,
-    };
-    expect(computeEffectiveState(log, '2026-08-20', '2026-08-22')).toBe('missed');
+    const stale = log({ routineItemId: 'a', time: '08:00', state: 'pending', locked: false, respondedAt: null });
+    expect(computeEffectiveState(stale, '2026-08-20', '2026-08-22')).toBe('missed');
   });
 
   it('treats a missing log for today as pending, not missed', () => {
@@ -40,83 +56,134 @@ describe('computeEffectiveState', () => {
 
 describe('computeRepromptTime', () => {
   it('schedules 6 hours later when that stays within the same day and after 10:00', () => {
-    const respondedAt = new Date(2026, 7, 22, 8, 0);
-    const reprompt = computeRepromptTime(respondedAt);
-    expect(reprompt).toEqual(new Date(2026, 7, 22, 14, 0));
+    expect(computeRepromptTime(new Date(2026, 7, 22, 8, 0))).toEqual(new Date(2026, 7, 22, 14, 0));
   });
 
   it('drops the reprompt when it would cross midnight', () => {
-    const respondedAt = new Date(2026, 7, 22, 19, 0); // +6h = 01:00 next day
-    expect(computeRepromptTime(respondedAt)).toBeNull();
+    expect(computeRepromptTime(new Date(2026, 7, 22, 19, 0))).toBeNull();
   });
 
   it('drops the reprompt when it would land before 10:00', () => {
-    // Only reachable with an unusual base time, but the guard should still hold.
-    const respondedAt = new Date(2026, 7, 22, 3, 0); // +6h = 09:00, before window
-    expect(computeRepromptTime(respondedAt)).toBeNull();
+    expect(computeRepromptTime(new Date(2026, 7, 22, 3, 0))).toBeNull();
   });
 });
 
-describe('getRequiredSlots', () => {
-  const periods = [{ id: 'p1', startDate: '2026-08-01', endDate: null }];
-  const drugs = [
-    { treatmentPeriodId: 'p1', slot: 'am' as const },
-    { treatmentPeriodId: 'p1', slot: 'pm' as const },
+describe('dayOfWeek', () => {
+  it('maps a date to a local weekday index (0 = Sunday)', () => {
+    expect(dayOfWeek('2026-08-23')).toBe(0); // Sunday
+    expect(dayOfWeek('2026-08-24')).toBe(1); // Monday
+  });
+});
+
+describe('getScheduledDoses', () => {
+  const routines = [{ id: 'r1', startDate: '2026-08-01', endDate: null }];
+
+  it('returns nothing before the routine starts', () => {
+    expect(getScheduledDoses('2026-07-31', routines, [], [item({ id: 'i1' })])).toEqual([]);
+  });
+
+  it('returns one dose per scheduled time — a twice-daily item yields two', () => {
+    const doses = getScheduledDoses(
+      '2026-08-24',
+      routines,
+      [],
+      [item({ id: 'min', times: ['08:00', '20:00'] })]
+    );
+    expect(doses).toEqual([
+      { itemId: 'min', time: '08:00' },
+      { itemId: 'min', time: '20:00' },
+    ]);
+  });
+
+  it('only includes items scheduled for that weekday', () => {
+    // 2026-08-24 is a Monday; the device item is Mon/Wed/Fri, the topical is daily.
+    const items = [
+      item({ id: 'min', name: 'Minoxidil' }),
+      item({ id: 'lllt', name: 'LLLT', type: 'device', daysOfWeek: [1, 3, 5], times: ['19:00'] }),
+    ];
+    expect(getScheduledDoses('2026-08-24', routines, [], items).map((d) => d.itemId)).toEqual(['min', 'lllt']);
+    // 2026-08-25 is a Tuesday — the device isn't scheduled.
+    expect(getScheduledDoses('2026-08-25', routines, [], items).map((d) => d.itemId)).toEqual(['min']);
+  });
+
+  it('returns nothing during an open pause window', () => {
+    const pauses = [{ routineId: 'r1', pausedAt: '2026-08-05', resumedAt: null }];
+    expect(getScheduledDoses('2026-08-24', routines, pauses, [item({ id: 'i1' })])).toEqual([]);
+  });
+
+  it('resumes once a pause window closes', () => {
+    const pauses = [{ routineId: 'r1', pausedAt: '2026-08-05', resumedAt: '2026-08-10' }];
+    expect(getScheduledDoses('2026-08-24', routines, pauses, [item({ id: 'i1' })])).toHaveLength(1);
+  });
+
+  it('ignores items belonging to a different routine', () => {
+    const items = [item({ id: 'i1' }), item({ id: 'other', routineId: 'r2' })];
+    expect(getScheduledDoses('2026-08-24', routines, [], items).map((d) => d.itemId)).toEqual(['i1']);
+  });
+
+  it('orders doses by time of day', () => {
+    const items = [
+      item({ id: 'evening', times: ['20:00'] }),
+      item({ id: 'morning', times: ['07:00'] }),
+    ];
+    expect(getScheduledDoses('2026-08-24', routines, [], items).map((d) => d.itemId)).toEqual([
+      'morning',
+      'evening',
+    ]);
+  });
+});
+
+describe('resolveDayProgress', () => {
+  const currentDate = '2026-08-22';
+  const scheduled = [
+    { itemId: 'min', time: '08:00' },
+    { itemId: 'min', time: '20:00' },
+    { itemId: 'fin', time: '08:00' },
   ];
 
-  it('returns no slots before the period starts', () => {
-    expect(getRequiredSlots('2026-07-31', periods, [], drugs)).toEqual([]);
+  it('is no-treatment when nothing is scheduled', () => {
+    expect(resolveDayProgress('2026-08-22', [], [], currentDate)).toEqual({
+      status: 'no-treatment',
+      taken: 0,
+      total: 0,
+    });
   });
 
-  it('returns configured slots while the period is active', () => {
-    expect(getRequiredSlots('2026-08-05', periods, [], drugs)).toEqual(['am', 'pm']);
-  });
-
-  it('returns no slots during an open pause window', () => {
-    const pauseWindows = [{ treatmentPeriodId: 'p1', pausedAt: '2026-08-05', resumedAt: null }];
-    expect(getRequiredSlots('2026-08-10', periods, pauseWindows, drugs)).toEqual([]);
-  });
-
-  it('resumes requiring slots once a pause window closes', () => {
-    const pauseWindows = [
-      { treatmentPeriodId: 'p1', pausedAt: '2026-08-05', resumedAt: '2026-08-10' },
+  it('is complete only when every scheduled dose was taken', () => {
+    const logs = [
+      log({ routineItemId: 'min', time: '08:00' }),
+      log({ routineItemId: 'min', time: '20:00' }),
+      log({ routineItemId: 'fin', time: '08:00' }),
     ];
-    expect(getRequiredSlots('2026-08-10', periods, pauseWindows, drugs)).toEqual(['am', 'pm']);
+    expect(resolveDayProgress('2026-08-20', scheduled, logs, currentDate)).toEqual({
+      status: 'complete',
+      taken: 3,
+      total: 3,
+    });
   });
 
-  it('collapses a "both" slot drug into am + pm', () => {
-    const bothDrugs = [{ treatmentPeriodId: 'p1', slot: 'both' as const }];
-    expect(getRequiredSlots('2026-08-05', periods, [], bothDrugs).sort()).toEqual(['am', 'pm']);
+  it('distinguishes which dose of a twice-daily item was skipped', () => {
+    const logs = [
+      log({ routineItemId: 'min', time: '08:00', state: 'taken' }),
+      log({ routineItemId: 'min', time: '20:00', state: 'skipped' }),
+      log({ routineItemId: 'fin', time: '08:00', state: 'taken' }),
+    ];
+    const progress = resolveDayProgress('2026-08-20', scheduled, logs, currentDate);
+    expect(progress).toEqual({ status: 'incomplete', taken: 2, total: 3 });
+  });
+
+  it('reports partial progress for a day still in flight', () => {
+    const logs = [log({ routineItemId: 'min', time: '08:00', date: currentDate })];
+    expect(resolveDayProgress(currentDate, scheduled, logs, currentDate)).toEqual({
+      status: 'in-progress',
+      taken: 1,
+      total: 3,
+    });
   });
 });
 
 describe('resolveDayStatus', () => {
-  const currentDate = '2026-08-22';
-
-  it('is no-treatment when nothing is required', () => {
-    expect(resolveDayStatus('2026-08-22', [], [], currentDate)).toBe('no-treatment');
-  });
-
-  it('is complete when every required slot was taken', () => {
-    const logs: DoseLogRecord[] = [
-      { date: '2026-08-20', slot: 'am', state: 'taken', locked: true, respondedAt: 'x' },
-      { date: '2026-08-20', slot: 'pm', state: 'taken', locked: true, respondedAt: 'x' },
-    ];
-    expect(resolveDayStatus('2026-08-20', ['am', 'pm'], logs, currentDate)).toBe('complete');
-  });
-
-  it('is incomplete when any required slot was skipped, even if the other was taken', () => {
-    const logs: DoseLogRecord[] = [
-      { date: '2026-08-20', slot: 'am', state: 'taken', locked: true, respondedAt: 'x' },
-      { date: '2026-08-20', slot: 'pm', state: 'skipped', locked: true, respondedAt: 'x' },
-    ];
-    expect(resolveDayStatus('2026-08-20', ['am', 'pm'], logs, currentDate)).toBe('incomplete');
-  });
-
-  it('is in-progress for today when a required slot has not been answered yet', () => {
-    const logs: DoseLogRecord[] = [
-      { date: '2026-08-22', slot: 'am', state: 'taken', locked: true, respondedAt: 'x' },
-    ];
-    expect(resolveDayStatus('2026-08-22', ['am', 'pm'], logs, currentDate)).toBe('in-progress');
+  it('rolls progress up to just the status', () => {
+    expect(resolveDayStatus('2026-08-22', [], [], '2026-08-22')).toBe('no-treatment');
   });
 });

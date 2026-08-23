@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 
 import { reconcileMissedDoses } from '@/features/dose-log/api';
 import { getProfile } from '@/features/onboarding/api';
-import { getAllTreatmentPeriods } from '@/features/treatment/api';
+import { getAllRoutines } from '@/features/routine/api';
 
 export default function Index() {
   const { data: profile, isLoading } = useQuery({ queryKey: ['profile'], queryFn: getProfile });
@@ -16,7 +16,7 @@ export default function Index() {
     (async () => {
       try {
         if (profile) {
-          const periods = await getAllTreatmentPeriods();
+          const periods = await getAllRoutines();
           if (periods[0]) {
             await reconcileMissedDoses(periods[0].startDate);
           }

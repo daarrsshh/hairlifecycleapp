@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "889af2ec-30c5-42fb-a0e5-cf654cfee442",
+  "id": "3b11fdc7-c5ff-4a6b-b6ee-a7e045f1f57b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "app_settings": {
@@ -14,22 +14,6 @@
           "notNull": true,
           "autoincrement": false,
           "default": "'singleton'"
-        },
-        "reminder_am_time": {
-          "name": "reminder_am_time",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'08:00'"
-        },
-        "reminder_pm_time": {
-          "name": "reminder_pm_time",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'20:00'"
         },
         "photo_reminder_interval_days": {
           "name": "photo_reminder_interval_days",
@@ -71,8 +55,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "treatment_period_id": {
-          "name": "treatment_period_id",
+        "routine_item_id": {
+          "name": "routine_item_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -85,8 +69,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "slot": {
-          "name": "slot",
+        "time": {
+          "name": "time",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -117,23 +101,23 @@
         }
       },
       "indexes": {
-        "dose_logs_period_date_slot": {
-          "name": "dose_logs_period_date_slot",
+        "dose_logs_item_date_time": {
+          "name": "dose_logs_item_date_time",
           "columns": [
-            "treatment_period_id",
+            "routine_item_id",
             "date",
-            "slot"
+            "time"
           ],
           "isUnique": true
         }
       },
       "foreignKeys": {
-        "dose_logs_treatment_period_id_treatment_periods_id_fk": {
-          "name": "dose_logs_treatment_period_id_treatment_periods_id_fk",
+        "dose_logs_routine_item_id_routine_items_id_fk": {
+          "name": "dose_logs_routine_item_id_routine_items_id_fk",
           "tableFrom": "dose_logs",
-          "tableTo": "treatment_periods",
+          "tableTo": "routine_items",
           "columnsFrom": [
-            "treatment_period_id"
+            "routine_item_id"
           ],
           "columnsTo": [
             "id"
@@ -156,8 +140,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "treatment_period_id": {
-          "name": "treatment_period_id",
+        "routine_id": {
+          "name": "routine_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -195,12 +179,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "photos_treatment_period_id_treatment_periods_id_fk": {
-          "name": "photos_treatment_period_id_treatment_periods_id_fk",
+        "photos_routine_id_routines_id_fk": {
+          "name": "photos_routine_id_routines_id_fk",
           "tableFrom": "photos",
-          "tableTo": "treatment_periods",
+          "tableTo": "routines",
           "columnsFrom": [
-            "treatment_period_id"
+            "routine_id"
           ],
           "columnsTo": [
             "id"
@@ -259,8 +243,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "treatment_pause_periods": {
-      "name": "treatment_pause_periods",
+    "routine_items": {
+      "name": "routine_items",
       "columns": {
         "id": {
           "name": "id",
@@ -269,8 +253,89 @@
           "notNull": true,
           "autoincrement": false
         },
-        "treatment_period_id": {
-          "name": "treatment_period_id",
+        "routine_id": {
+          "name": "routine_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "dosage": {
+          "name": "dosage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "days_of_week": {
+          "name": "days_of_week",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "times": {
+          "name": "times",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "routine_items_routine_id_routines_id_fk": {
+          "name": "routine_items_routine_id_routines_id_fk",
+          "tableFrom": "routine_items",
+          "tableTo": "routines",
+          "columnsFrom": [
+            "routine_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "routine_pause_periods": {
+      "name": "routine_pause_periods",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "routine_id": {
+          "name": "routine_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -300,12 +365,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "treatment_pause_periods_treatment_period_id_treatment_periods_id_fk": {
-          "name": "treatment_pause_periods_treatment_period_id_treatment_periods_id_fk",
-          "tableFrom": "treatment_pause_periods",
-          "tableTo": "treatment_periods",
+        "routine_pause_periods_routine_id_routines_id_fk": {
+          "name": "routine_pause_periods_routine_id_routines_id_fk",
+          "tableFrom": "routine_pause_periods",
+          "tableTo": "routines",
           "columnsFrom": [
-            "treatment_period_id"
+            "routine_id"
           ],
           "columnsTo": [
             "id"
@@ -318,86 +383,13 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "treatment_period_drugs": {
-      "name": "treatment_period_drugs",
+    "routines": {
+      "name": "routines",
       "columns": {
         "id": {
           "name": "id",
           "type": "text",
           "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "treatment_period_id": {
-          "name": "treatment_period_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "drug_name": {
-          "name": "drug_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "dosage": {
-          "name": "dosage",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "frequency": {
-          "name": "frequency",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "slot": {
-          "name": "slot",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "treatment_period_drugs_treatment_period_id_treatment_periods_id_fk": {
-          "name": "treatment_period_drugs_treatment_period_id_treatment_periods_id_fk",
-          "tableFrom": "treatment_period_drugs",
-          "tableTo": "treatment_periods",
-          "columnsFrom": [
-            "treatment_period_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "treatment_periods": {
-      "name": "treatment_periods",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "plan_type": {
-          "name": "plan_type",
-          "type": "text",
-          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },

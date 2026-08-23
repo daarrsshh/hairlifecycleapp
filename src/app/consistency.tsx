@@ -9,9 +9,9 @@ import { ConsistencyHeatmap } from '@/features/consistency/components/consistenc
 import { DayDetailCard } from '@/features/consistency/components/day-detail-card';
 import { useConsistencyStats } from '@/features/consistency/hooks';
 
-function slotPercent(taken: number, total: number): string {
-  if (total === 0) return '—';
-  return `${Math.round((taken / total) * 100)}%`;
+function itemRatio(taken: number, total: number): string {
+  if (total === 0) return 'Nothing due yet';
+  return `${taken} of ${total}`;
 }
 
 export default function ConsistencyScreen() {
@@ -40,10 +40,19 @@ export default function ConsistencyScreen() {
           </ThemedText>
         </ThemedView>
 
-        <View style={styles.statsRow}>
-          <StatTile label="Morning" value={slotPercent(data.am.taken, data.am.total)} />
-          <StatTile label="Evening" value={slotPercent(data.pm.taken, data.pm.total)} />
-        </View>
+        {data.itemsThisWeek.length > 0 ? (
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <ThemedText themeColor="textSecondary" type="small">
+              This week, item by item
+            </ThemedText>
+            {data.itemsThisWeek.map((item) => (
+              <View key={item.itemId} style={styles.itemRow}>
+                <ThemedText type="small">{item.name}</ThemedText>
+                <ThemedText type="smallBold">{itemRatio(item.taken, item.total)}</ThemedText>
+              </View>
+            ))}
+          </ThemedView>
+        ) : null}
 
         <ThemedView type="backgroundElement" style={styles.card}>
           <ThemedText themeColor="textSecondary" type="small" style={styles.heatmapLabel}>
@@ -83,4 +92,5 @@ const styles = StyleSheet.create({
   statTile: { flex: 1, padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.one },
   card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.one },
   heatmapLabel: { marginBottom: Spacing.one },
+  itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 });

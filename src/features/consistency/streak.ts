@@ -110,27 +110,33 @@ export function computeMonthRatio(
   return computeRangeRatio(monthStart, monthEnd, currentDate, dayStatus);
 }
 
-export interface SlotBreakdown {
+export interface ItemConsistency {
   taken: number;
   total: number;
 }
 
-/** Per-slot (AM vs PM) taken/required counts over a date range, for the Consistency screen's AM vs. PM breakdown. */
-export function computeSlotBreakdown(
+/**
+ * Taken/scheduled counts for a single routine item over a date range — backs "LLLT: 3 of 3
+ * this week". Replaces the old AM/PM split, which stopped meaning anything once items carry
+ * their own schedules. Only counts doses that have actually resolved, so a still-pending
+ * today doesn't drag the ratio down.
+ */
+export function computeItemConsistency(
   fromDate: DateString,
   toDate: DateString,
-  slot: 'am' | 'pm',
+  itemId: string,
   currentDate: DateString,
-  requiredSlotsFor: (date: DateString) => ('am' | 'pm')[],
-  effectiveStateFor: (date: DateString, slot: 'am' | 'pm') => string
-): SlotBreakdown {
+  scheduledFor: (date: DateString) => { itemId: string; time: string }[],
+  effectiveStateFor: (date: DateString, itemId: string, time: string) => string
+): ItemConsistency {
   let taken = 0;
   let total = 0;
   let cursor = fromDate;
 
   while (!isBefore(toDate, cursor) && !isBefore(currentDate, cursor)) {
-    if (requiredSlotsFor(cursor).includes(slot)) {
-      const state = effectiveStateFor(cursor, slot);
+    for (const dose of scheduledFor(cursor)) {
+      if (dose.itemId !== itemId) continue;
+      const state = effectiveStateFor(cursor, itemId, dose.time);
       if (state !== 'pending') {
         total++;
         if (state === 'taken') taken++;

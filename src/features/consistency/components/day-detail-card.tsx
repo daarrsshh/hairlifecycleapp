@@ -4,17 +4,19 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { getDoseLogsForDate, getRequiredSlotsForDate } from '@/features/dose-log/api';
-import { computeEffectiveState, type DoseSlot } from '@/features/dose-log/doseState';
+import { getDoseLogsForDate, getScheduledDosesForDate } from '@/features/dose-log/api';
+import { computeEffectiveState } from '@/features/dose-log/doseState';
 import { useLogDose } from '@/features/dose-log/hooks';
-import { getPeriodForDate } from '@/features/treatment/api';
+import { getAllRoutineItems } from '@/features/routine/api';
+import { formatTime } from '@/features/routine/describe';
 import { useTheme } from '@/hooks/use-theme';
 import { today, type DateString } from '@/lib/date';
 
-const SLOT_LABEL: Record<DoseSlot, string> = { am: 'Morning', pm: 'Evening' };
-
-/** The calendar's "corrections" affordance (PRD §4.2): tapping a day shows its slots, and a
- * Missed slot (unlocked, per PRD §5.2) can still be marked Taken retroactively. */
+/**
+ * The calendar's "corrections" affordance (PRD §4.2): tapping a day lists every dose that was
+ * scheduled, and a Missed one (still unlocked, per PRD §5.2) can be marked Taken retroactively.
+ * Each row is a specific item at a specific time, so a twice-daily item shows twice.
+ */
 export function DayDetailCard({ date, onClose }: { date: DateString; onClose: () => void }) {
   const theme = useTheme();
   const logDose = useLogDose();
@@ -22,22 +24,22 @@ export function DayDetailCard({ date, onClose }: { date: DateString; onClose: ()
   const { data } = useQuery({
     queryKey: ['dayDetail', date],
     queryFn: async () => {
-      const [period, requiredSlots, logs] = await Promise.all([
-        getPeriodForDate(date),
-        getRequiredSlotsForDate(date),
+      const [scheduled, logs, items] = await Promise.all([
+        getScheduledDosesForDate(date),
         getDoseLogsForDate(date),
+        getAllRoutineItems(),
       ]);
-      return { period, requiredSlots, logs };
+      return { scheduled, logs, itemsById: new Map(items.map((i) => [i.id, i])) };
     },
   });
 
-  if (!data || data.requiredSlots.length === 0) return null;
-  const { period, requiredSlots, logs } = data;
+  if (!data || data.scheduled.length === 0) return null;
+  const { scheduled, logs, itemsById } = data;
   const currentDate = today();
 
   return (
     <ThemedView type="backgroundElement" style={styles.card}>
-      <ThemedView style={styles.header}>
+      <ThemedView type="backgroundElement" style={styles.header}>
         <ThemedText type="smallBold">{date}</ThemedText>
         <Pressable onPress={onClose}>
           <ThemedText themeColor="textSecondary" type="small">
@@ -46,21 +48,33 @@ export function DayDetailCard({ date, onClose }: { date: DateString; onClose: ()
         </Pressable>
       </ThemedView>
 
-      {requiredSlots.map((slot) => {
-        const log = logs.find((l) => l.slot === slot);
+      {scheduled.map((dose) => {
+        const item = itemsById.get(dose.itemId);
+        if (!item) return null;
+
+        const log = logs.find((l) => l.routineItemId === dose.itemId && l.time === dose.time);
         const state = computeEffectiveState(log, date, currentDate);
 
         return (
-          <View key={slot} style={styles.row}>
-            <ThemedText themeColor="textSecondary" type="small">
-              {SLOT_LABEL[slot]}
-            </ThemedText>
+          <View key={`${dose.itemId}-${dose.time}`} style={styles.row}>
+            <ThemedView type="backgroundElement" style={styles.rowText}>
+              <ThemedText type="small">{item.name}</ThemedText>
+              <ThemedText themeColor="textSecondary" type="small">
+                {formatTime(dose.time)}
+              </ThemedText>
+            </ThemedView>
+
             {state === 'taken' ? (
               <ThemedText style={{ color: theme.taken }}>✓ Taken</ThemedText>
-            ) : state === 'missed' && period ? (
+            ) : state === 'missed' ? (
               <Pressable
                 onPress={() =>
-                  logDose.mutate({ treatmentPeriodId: period.id, date, slot, state: 'taken' })
+                  logDose.mutate({
+                    routineItemId: dose.itemId,
+                    date,
+                    time: dose.time,
+                    state: 'taken',
+                  })
                 }>
                 <ThemedText type="linkPrimary">Mark as taken</ThemedText>
               </Pressable>
@@ -78,4 +92,5 @@ const styles = StyleSheet.create({
   card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  rowText: { gap: 1 },
 });

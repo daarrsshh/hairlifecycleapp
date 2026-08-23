@@ -2,14 +2,13 @@ import { and, eq } from 'drizzle-orm';
 import { randomUUID } from 'expo-crypto';
 
 import { db } from '@/db/client';
-import { doseLogs, treatmentPausePeriods, treatmentPeriodDrugs, treatmentPeriods } from '@/db/schema';
+import { doseLogs, routineItems, routinePausePeriods, routines } from '@/db/schema';
 import {
-  findPeriodForDate,
-  getRequiredSlots,
-  resolveDayStatus,
+  getScheduledDoses,
+  resolveDayProgress,
   type DoseLogRecord,
-  type DoseSlot,
   type DoseState,
+  type ScheduledDose,
 } from '@/features/dose-log/doseState';
 import { addDays, today, type DateString } from '@/lib/date';
 
@@ -18,30 +17,32 @@ export async function getDoseLogsForDate(date: DateString): Promise<DoseLogRecor
 }
 
 export async function loadDosingContext() {
-  const [periods, drugs, pauseWindows] = await Promise.all([
-    db.select().from(treatmentPeriods),
-    db.select().from(treatmentPeriodDrugs),
-    db.select().from(treatmentPausePeriods),
+  const [allRoutines, items, pauseWindows] = await Promise.all([
+    db.select().from(routines),
+    db.select().from(routineItems),
+    db.select().from(routinePausePeriods),
   ]);
-  return { periods, drugs, pauseWindows };
+  return { routines: allRoutines, items, pauseWindows };
 }
 
-export async function getRequiredSlotsForDate(date: DateString): Promise<DoseSlot[]> {
-  const { periods, drugs, pauseWindows } = await loadDosingContext();
-  return getRequiredSlots(date, periods, pauseWindows, drugs);
+export async function getScheduledDosesForDate(date: DateString): Promise<ScheduledDose[]> {
+  const { routines: allRoutines, items, pauseWindows } = await loadDosingContext();
+  return getScheduledDoses(date, allRoutines, pauseWindows, items);
 }
 
-/** Records a user's response to a dose slot. Yes/Skip lock immediately; a fresh log always starts unlocked. */
+/** Records a response for one item at one time. Taken/Skipped lock immediately (PRD §5.2). */
 export async function logDose(
-  treatmentPeriodId: string,
+  routineItemId: string,
   date: DateString,
-  slot: DoseSlot,
+  time: string,
   state: Extract<DoseState, 'taken' | 'skipped'>
 ) {
   const existing = await db
     .select()
     .from(doseLogs)
-    .where(and(eq(doseLogs.treatmentPeriodId, treatmentPeriodId), eq(doseLogs.date, date), eq(doseLogs.slot, slot)));
+    .where(
+      and(eq(doseLogs.routineItemId, routineItemId), eq(doseLogs.date, date), eq(doseLogs.time, time))
+    );
 
   const respondedAt = new Date().toISOString();
 
@@ -51,24 +52,20 @@ export async function logDose(
       .set({ state, locked: true, respondedAt })
       .where(eq(doseLogs.id, existing[0].id));
   } else {
-    await db.insert(doseLogs).values({
-      id: randomUUID(),
-      treatmentPeriodId,
-      date,
-      slot,
-      state,
-      locked: true,
-      respondedAt,
-    });
+    await db
+      .insert(doseLogs)
+      .values({ id: randomUUID(), routineItemId, date, time, state, locked: true, respondedAt });
   }
 }
 
-/** A "No" response: stays unlocked/pending (so it can still resolve to Taken later) but records the response time for reprompt scheduling. */
-export async function recordDoseNoResponse(treatmentPeriodId: string, date: DateString, slot: DoseSlot) {
+/** A "No" response: stays unlocked/pending (so it can still resolve to Taken) but records the response time for reprompt scheduling. */
+export async function recordDoseNoResponse(routineItemId: string, date: DateString, time: string) {
   const existing = await db
     .select()
     .from(doseLogs)
-    .where(and(eq(doseLogs.treatmentPeriodId, treatmentPeriodId), eq(doseLogs.date, date), eq(doseLogs.slot, slot)));
+    .where(
+      and(eq(doseLogs.routineItemId, routineItemId), eq(doseLogs.date, date), eq(doseLogs.time, time))
+    );
 
   const respondedAt = new Date().toISOString();
 
@@ -77,9 +74,9 @@ export async function recordDoseNoResponse(treatmentPeriodId: string, date: Date
   } else {
     await db.insert(doseLogs).values({
       id: randomUUID(),
-      treatmentPeriodId,
+      routineItemId,
       date,
-      slot,
+      time,
       state: 'pending',
       locked: false,
       respondedAt,
@@ -88,32 +85,27 @@ export async function recordDoseNoResponse(treatmentPeriodId: string, date: Date
 }
 
 /**
- * Walks every required slot from `fromDate` through yesterday and persists `missed` for any
+ * Walks every scheduled dose from `fromDate` through yesterday and persists `missed` for any
  * that never got a locked response — the "auto-mark Missed at end of day" from PRD §8,
  * implemented as an on-open reconciliation pass instead of a background job.
  */
 export async function reconcileMissedDoses(fromDate: DateString) {
   const currentDate = today();
-  const { periods, drugs, pauseWindows } = await loadDosingContext();
-
+  const { routines: allRoutines, items, pauseWindows } = await loadDosingContext();
   const allLogs = await db.select().from(doseLogs);
 
   let cursor = fromDate;
   while (cursor < currentDate) {
-    const required = getRequiredSlots(cursor, periods, pauseWindows, drugs);
-    for (const slot of required) {
-      const period = findPeriodForDate(periods, cursor);
-      if (!period) continue;
-
+    for (const dose of getScheduledDoses(cursor, allRoutines, pauseWindows, items)) {
       const existing = allLogs.find(
-        (l) => l.treatmentPeriodId === period.id && l.date === cursor && l.slot === slot
+        (l) => l.routineItemId === dose.itemId && l.date === cursor && l.time === dose.time
       );
       if (!existing) {
         await db.insert(doseLogs).values({
           id: randomUUID(),
-          treatmentPeriodId: period.id,
+          routineItemId: dose.itemId,
           date: cursor,
-          slot,
+          time: dose.time,
           state: 'missed',
           locked: false,
           respondedAt: null,
@@ -126,9 +118,9 @@ export async function reconcileMissedDoses(fromDate: DateString) {
   }
 }
 
-export async function getDayStatus(date: DateString): Promise<ReturnType<typeof resolveDayStatus>> {
-  const { periods, drugs, pauseWindows } = await loadDosingContext();
-  const required = getRequiredSlots(date, periods, pauseWindows, drugs);
+export async function getDayProgress(date: DateString) {
+  const { routines: allRoutines, items, pauseWindows } = await loadDosingContext();
+  const scheduled = getScheduledDoses(date, allRoutines, pauseWindows, items);
   const logsForDate = await getDoseLogsForDate(date);
-  return resolveDayStatus(date, required, logsForDate, today());
+  return resolveDayProgress(date, scheduled, logsForDate, today());
 }

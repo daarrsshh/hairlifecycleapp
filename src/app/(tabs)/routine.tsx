@@ -1,37 +1,36 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { Pressable, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { describeTreatment } from '@/features/treatment/describe';
+import { ITEM_TYPE_LABEL } from '@/features/routine/catalog';
+import { ITEM_TYPE_ICON } from '@/features/routine/components/routine-builder';
+import { describeRoutine, describeSchedule } from '@/features/routine/describe';
 import {
-  getActiveTreatmentPeriod,
-  getDrugsForPeriod,
-  pauseTreatmentPeriod,
-  resumeTreatmentPeriod,
-} from '@/features/treatment/api';
+  getActiveRoutine,
+  getItemsForRoutine,
+  pauseRoutine,
+  resumeRoutine,
+} from '@/features/routine/api';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function RoutineScreen() {
+  const theme = useTheme();
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ['routine'],
     queryFn: async () => {
-      const period = await getActiveTreatmentPeriod();
-      const drugs = period ? await getDrugsForPeriod(period.id) : [];
-      return { period, drugs };
+      const routine = await getActiveRoutine();
+      const items = routine ? await getItemsForRoutine(routine.id) : [];
+      return { routine, items };
     },
   });
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ['routine'] });
-    queryClient.invalidateQueries({ queryKey: ['doses'] });
-    queryClient.invalidateQueries({ queryKey: ['streak'] });
-    queryClient.invalidateQueries({ queryKey: ['consistency'] });
-  };
+  const routine = data?.routine;
+  const items = data?.items ?? [];
 
   return (
     <ThemedView style={styles.container}>
@@ -47,50 +46,85 @@ export default function RoutineScreen() {
           ),
         }}
       />
-      <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.content}>
         <ThemedText type="subtitle">Routine</ThemedText>
 
-        {!isLoading && data?.period ? (
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="smallBold">{describeTreatment(data.period.planType, data.drugs)}</ThemedText>
-            <ThemedText themeColor="textSecondary" type="small">
-              Since {data.period.startDate}
-            </ThemedText>
-
-            <Pressable
-              onPress={async () => {
-                if (data.period!.status === 'paused') {
-                  await resumeTreatmentPeriod(data.period!.id);
-                } else {
-                  await pauseTreatmentPeriod(data.period!.id, null);
-                }
-                invalidate();
-              }}>
-              <ThemedText type="linkPrimary">
-                {data.period.status === 'paused' ? 'Resume' : 'Pause treatment'}
-              </ThemedText>
-            </Pressable>
-          </ThemedView>
+        {!isLoading && !routine ? (
+          <ThemedText themeColor="textSecondary">No routine set up yet.</ThemedText>
         ) : null}
 
-        <Link href="/treatment/start-new" asChild>
-          <Pressable>
-            <ThemedText type="linkPrimary">Start new treatment</ThemedText>
-          </Pressable>
-        </Link>
+        {routine ? (
+          <>
+            <ThemedView type="backgroundElement" style={styles.summary}>
+              <ThemedText type="smallBold">{describeRoutine(items)}</ThemedText>
+              <ThemedText themeColor="textSecondary" type="small">
+                Since {routine.startDate}
+                {routine.status === 'paused' ? ' · Paused' : ''}
+              </ThemedText>
+              <Pressable
+                onPress={async () => {
+                  if (routine.status === 'paused') await resumeRoutine(routine.id);
+                  else await pauseRoutine(routine.id, null);
+                  queryClient.invalidateQueries();
+                }}>
+                <ThemedText type="linkPrimary">
+                  {routine.status === 'paused' ? 'Resume routine' : 'Pause routine'}
+                </ThemedText>
+              </Pressable>
+            </ThemedView>
 
-        <Link href="/timeline" asChild>
-          <Pressable>
-            <ThemedText type="linkPrimary">View timeline</ThemedText>
-          </Pressable>
-        </Link>
-      </SafeAreaView>
+            {items.map((item) => (
+              <ThemedView key={item.id} type="backgroundElement" style={styles.itemCard}>
+                <SymbolView name={ITEM_TYPE_ICON[item.type]} size={20} tintColor={theme.primary} />
+                <ThemedView type="backgroundElement" style={styles.itemText}>
+                  <ThemedText type="smallBold">
+                    {item.name}
+                    {item.dosage ? ` · ${item.dosage}` : ''}
+                  </ThemedText>
+                  <ThemedText themeColor="textSecondary" type="small">
+                    {ITEM_TYPE_LABEL[item.type]} · {describeSchedule(item.daysOfWeek, item.times)}
+                  </ThemedText>
+                </ThemedView>
+              </ThemedView>
+            ))}
+          </>
+        ) : null}
+
+        <ThemedView style={styles.links}>
+          <Link href="/routine/weekly" asChild>
+            <Pressable>
+              <ThemedText type="linkPrimary">View your week</ThemedText>
+            </Pressable>
+          </Link>
+          <Link href="/routine/new" asChild>
+            <Pressable>
+              <ThemedText type="linkPrimary">
+                {routine ? 'Start new routine' : 'Set up your routine'}
+              </ThemedText>
+            </Pressable>
+          </Link>
+          <Link href="/timeline" asChild>
+            <Pressable>
+              <ThemedText type="linkPrimary">View timeline</ThemedText>
+            </Pressable>
+          </Link>
+        </ThemedView>
+      </ScrollView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  safeArea: { flex: 1, paddingHorizontal: Spacing.four, gap: Spacing.three },
-  card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
+  content: { padding: Spacing.four, gap: Spacing.three },
+  summary: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
+  itemCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.two,
+    padding: Spacing.three,
+    borderRadius: Spacing.three,
+  },
+  itemText: { flex: 1, gap: Spacing.half },
+  links: { gap: Spacing.two, paddingTop: Spacing.two },
 });

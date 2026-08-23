@@ -2,8 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { logDose, recordDoseNoResponse } from '@/features/dose-log/api';
-import { computeRepromptTime, type DoseSlot } from '@/features/dose-log/doseState';
-import { getActiveTreatmentPeriod } from '@/features/treatment/api';
+import { computeRepromptTime } from '@/features/dose-log/doseState';
 import { today } from '@/lib/date';
 import { getNotificationsModule } from '@/lib/notifications-safe';
 import { scheduleReprompt } from '@/lib/notifications';
@@ -27,24 +26,27 @@ export function DoseNotificationResponder() {
     });
 
     const subscription = Notifications.addNotificationResponseReceivedListener(async (response) => {
-      const slot = response.notification.request.content.data?.slot as DoseSlot | undefined;
-      if (!slot) return;
+      // A reminder is batched: one notification can cover several items due at the same time,
+      // so one Yes/Skip answers for all of them.
+      const { itemIds, time } = response.notification.request.content.data as {
+        itemIds?: string[];
+        time?: string;
+      };
+      if (!itemIds?.length || !time) return;
 
-      const period = await getActiveTreatmentPeriod();
-      if (!period) return;
       const date = today();
 
       switch (response.actionIdentifier) {
         case 'yes':
-          await logDose(period.id, date, slot, 'taken');
+          await Promise.all(itemIds.map((id) => logDose(id, date, time, 'taken')));
           break;
         case 'skip':
-          await logDose(period.id, date, slot, 'skipped');
+          await Promise.all(itemIds.map((id) => logDose(id, date, time, 'skipped')));
           break;
         case 'no': {
-          await recordDoseNoResponse(period.id, date, slot);
+          await Promise.all(itemIds.map((id) => recordDoseNoResponse(id, date, time)));
           const reprompt = computeRepromptTime(new Date());
-          if (reprompt) await scheduleReprompt(slot, reprompt);
+          if (reprompt) await scheduleReprompt(itemIds, time, reprompt);
           break;
         }
         default:

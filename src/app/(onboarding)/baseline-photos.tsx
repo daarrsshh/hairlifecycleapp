@@ -4,18 +4,18 @@ import { useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { getRequiredSlots } from '@/features/dose-log/doseState';
 import { useOnboardingDraft } from '@/features/onboarding/draft-store';
 import { createProfile } from '@/features/onboarding/api';
-import { setReminderTimes } from '@/features/onboarding/settings-api';
+import { ensureAppSettings } from '@/features/onboarding/settings-api';
 import { savePhoto, recordPhotoSetCompleted, type PhotoAngle } from '@/features/photos/api';
 import { AngleCaptureFlow, CAPTURE_ANGLES, type CapturedPhotos } from '@/features/photos/components/angle-capture-flow';
-import { startTreatmentPeriod } from '@/features/treatment/api';
-import { today } from '@/lib/date';
-import { rescheduleDailyReminders, requestNotificationPermissions } from '@/lib/notifications';
+import { getAllRoutineItems, startRoutine } from '@/features/routine/api';
+import { useRoutineDraft } from '@/features/routine/draft-store';
+import { rescheduleRoutineReminders, requestNotificationPermissions } from '@/lib/notifications';
 
 export default function BaselinePhotosScreen() {
   const draft = useOnboardingDraft();
+  const routineDraft = useRoutineDraft();
   const queryClient = useQueryClient();
   const [finishing, setFinishing] = useState(false);
 
@@ -23,32 +23,22 @@ export default function BaselinePhotosScreen() {
     setFinishing(true);
     try {
       await createProfile({ name: draft.name, age: draft.age, hairLossType: draft.hairLossType });
-      const treatmentPeriodId = await startTreatmentPeriod({
-        planType: draft.planType ?? 'custom',
-        drugs: draft.drugs,
-      });
-      await setReminderTimes(draft.reminderAmTime, draft.reminderPmTime);
+      const routineId = await startRoutine({ items: routineDraft.items });
+      await ensureAppSettings();
 
-      const requiredSlots = getRequiredSlots(
-        today(),
-        [{ id: treatmentPeriodId, startDate: today(), endDate: null }],
-        [],
-        draft.drugs.map((d) => ({ treatmentPeriodId, slot: d.slot }))
-      );
       const granted = await requestNotificationPermissions();
       if (granted) {
-        await rescheduleDailyReminders(requiredSlots, {
-          am: draft.reminderAmTime,
-          pm: draft.reminderPmTime,
-        });
+        await rescheduleRoutineReminders(await getAllRoutineItems());
       }
 
       const entries = Object.entries(captured) as [PhotoAngle, string][];
-      await Promise.all(entries.map(([angle, uri]) => savePhoto(uri, angle, treatmentPeriodId)));
+      await Promise.all(entries.map(([angle, uri]) => savePhoto(uri, angle, routineId)));
       if (entries.length === CAPTURE_ANGLES.length) {
         await recordPhotoSetCompleted();
       }
 
+      routineDraft.reset();
+      draft.reset();
       queryClient.invalidateQueries();
       router.replace('/(tabs)');
     } finally {

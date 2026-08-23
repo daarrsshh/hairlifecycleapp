@@ -2,22 +2,21 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Link, Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { Pressable, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useCurrentStreak } from '@/features/consistency/hooks';
-import { computeEffectiveState, type DoseSlot, type DoseState } from '@/features/dose-log/doseState';
-import { useLogDose, useTodayDoses } from '@/features/dose-log/hooks';
+import type { DoseState } from '@/features/dose-log/doseState';
+import { useLogDose, useTodayDoses, type TodayDose } from '@/features/dose-log/hooks';
 import { getAppSettings } from '@/features/onboarding/settings-api';
 import { isPhotoReminderDue } from '@/features/photos/photo-reminder';
-import { resumeTreatmentPeriod } from '@/features/treatment/api';
+import { ITEM_TYPE_ICON } from '@/features/routine/components/routine-builder';
+import { formatTime } from '@/features/routine/describe';
+import { resumeRoutine } from '@/features/routine/api';
 import { useTheme } from '@/hooks/use-theme';
 import { today } from '@/lib/date';
-
-const SLOT_LABEL: Record<DoseSlot, string> = { am: 'Morning', pm: 'Evening' };
 
 function HomeTabScreen() {
   return (
@@ -33,6 +32,7 @@ function HomeTabScreen() {
 }
 
 export default function HomeScreen() {
+  const theme = useTheme();
   const { data, isLoading } = useTodayDoses();
   const { data: streak } = useCurrentStreak();
   const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: getAppSettings });
@@ -43,22 +43,21 @@ export default function HomeScreen() {
     return (
       <ThemedView style={styles.container}>
         <HomeTabScreen />
-        <SafeAreaView style={styles.safeArea} />
       </ThemedView>
     );
   }
 
-  const { period, requiredSlots, logs, drugs } = data;
+  const { routine, timeBlocks, takenCount, totalCount } = data;
   const currentDate = today();
 
-  if (!period) {
+  if (!routine) {
     return (
       <ThemedView style={styles.container}>
         <HomeTabScreen />
-        <SafeAreaView style={styles.safeArea}>
-          <ThemedText type="subtitle">No routine set up yet</ThemedText>
-          <ThemedText themeColor="textSecondary">Head to the Routine tab to start one.</ThemedText>
-        </SafeAreaView>
+        <ThemedView style={styles.centered}>
+          <ThemedText type="subtitle">No routine yet</ThemedText>
+          <ThemedText themeColor="textSecondary">Head to the Routine tab to set one up.</ThemedText>
+        </ThemedView>
       </ThemedView>
     );
   }
@@ -66,9 +65,16 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <HomeTabScreen />
-      <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.content}>
         <ThemedView style={styles.header}>
-          <ThemedText type="subtitle">Today</ThemedText>
+          <ThemedView>
+            <ThemedText type="subtitle">Today</ThemedText>
+            {totalCount > 0 ? (
+              <ThemedText themeColor="textSecondary" type="small">
+                {takenCount} of {totalCount} done
+              </ThemedText>
+            ) : null}
+          </ThemedView>
           <Link href="/consistency" asChild>
             <Pressable>
               <ThemedView type="backgroundElement" style={styles.streakBadge}>
@@ -80,13 +86,13 @@ export default function HomeScreen() {
           </Link>
         </ThemedView>
 
-        {period.status === 'paused' ? (
-          <ThemedView type="backgroundElement" style={styles.pausedCard}>
+        {routine.status === 'paused' ? (
+          <ThemedView type="backgroundElement" style={styles.banner}>
             <ThemedText type="smallBold">Paused</ThemedText>
             <Pressable
               onPress={async () => {
-                await resumeTreatmentPeriod(period.id);
-                queryClient.invalidateQueries({ queryKey: ['doses'] });
+                await resumeRoutine(routine.id);
+                queryClient.invalidateQueries();
               }}>
               <ThemedText type="linkPrimary">Resume</ThemedText>
             </Pressable>
@@ -97,7 +103,7 @@ export default function HomeScreen() {
         isPhotoReminderDue(settings.lastPhotoSetDate, currentDate, settings.photoReminderIntervalDays) ? (
           <Link href="/photos/capture" asChild>
             <Pressable>
-              <ThemedView type="backgroundElement" style={styles.pausedCard}>
+              <ThemedView type="backgroundElement" style={styles.banner}>
                 <ThemedText type="smallBold">Time for new photos</ThemedText>
                 <ThemedText type="linkPrimary">Add photos</ThemedText>
               </ThemedView>
@@ -105,41 +111,51 @@ export default function HomeScreen() {
           </Link>
         ) : null}
 
-        {requiredSlots.length === 0 && period.status !== 'paused' ? (
-          <ThemedText themeColor="textSecondary">Nothing to log today.</ThemedText>
+        {timeBlocks.length === 0 && routine.status !== 'paused' ? (
+          <ThemedText themeColor="textSecondary">Nothing scheduled today.</ThemedText>
         ) : null}
 
-        {requiredSlots.map((slot) => {
-          const drugNames = drugs
-            .filter((d) => d.slot === slot || d.slot === 'both')
-            .map((d) => d.drugName)
-            .join(', ');
-          const log = logs.find((l) => l.slot === slot);
-          const state = computeEffectiveState(log, currentDate, currentDate);
+        {timeBlocks.map((block) => (
+          <ThemedView key={block.time} style={styles.block}>
+            <ThemedText type="smallBold" themeColor="textSecondary">
+              {block.label} · {formatTime(block.time)}
+            </ThemedText>
 
-          return (
-            <ThemedView key={slot} type="backgroundElement" style={styles.slotCard}>
-              <ThemedView type="backgroundElement" style={styles.slotHeader}>
-                <ThemedText type="smallBold">{SLOT_LABEL[slot]}</ThemedText>
-                <ThemedText themeColor="textSecondary" type="small">
-                  {drugNames}
-                </ThemedText>
+            {block.doses.map((dose) => (
+              <ThemedView key={`${dose.itemId}-${dose.time}`} type="backgroundElement" style={styles.doseCard}>
+                <ThemedView type="backgroundElement" style={styles.doseHeader}>
+                  <SymbolView name={ITEM_TYPE_ICON[dose.type]} size={20} tintColor={theme.primary} />
+                  <ThemedText type="smallBold">
+                    {dose.name}
+                    {dose.dosage ? ` · ${dose.dosage}` : ''}
+                  </ThemedText>
+                </ThemedView>
+
+                <StateActions
+                  state={dose.state}
+                  onTaken={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    logDose.mutate({
+                      routineItemId: dose.itemId,
+                      date: currentDate,
+                      time: dose.time,
+                      state: 'taken',
+                    });
+                  }}
+                  onSkip={() =>
+                    logDose.mutate({
+                      routineItemId: dose.itemId,
+                      date: currentDate,
+                      time: dose.time,
+                      state: 'skipped',
+                    })
+                  }
+                />
               </ThemedView>
-
-              <StateActions
-                state={state}
-                onTaken={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  logDose.mutate({ treatmentPeriodId: period.id, date: currentDate, slot, state: 'taken' });
-                }}
-                onSkip={() => {
-                  logDose.mutate({ treatmentPeriodId: period.id, date: currentDate, slot, state: 'skipped' });
-                }}
-              />
-            </ThemedView>
-          );
-        })}
-      </SafeAreaView>
+            ))}
+          </ThemedView>
+        ))}
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -168,9 +184,7 @@ function StateActions({
 
   return (
     <ThemedView type="backgroundElement" style={styles.actionsRow}>
-      <Pressable
-        onPress={onTaken}
-        style={[styles.actionButton, { backgroundColor: theme.primary }]}>
+      <Pressable onPress={onTaken} style={[styles.actionButton, { backgroundColor: theme.primary }]}>
         <ThemedText style={{ color: theme.onPrimary }} type="smallBold">
           Taken
         </ThemedText>
@@ -184,20 +198,24 @@ function StateActions({
   );
 }
 
+export type { TodayDose };
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  safeArea: { flex: 1, paddingHorizontal: Spacing.four, gap: Spacing.three },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.two, padding: Spacing.four },
+  content: { padding: Spacing.four, gap: Spacing.three },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   streakBadge: { paddingVertical: Spacing.one, paddingHorizontal: Spacing.three, borderRadius: Spacing.four },
-  pausedCard: {
+  banner: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: Spacing.three,
     borderRadius: Spacing.three,
   },
-  slotCard: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
-  slotHeader: { gap: Spacing.half },
+  block: { gap: Spacing.two },
+  doseCard: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
+  doseHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   actionsRow: { flexDirection: 'row', gap: Spacing.two },
   actionButton: {
     paddingVertical: Spacing.two,

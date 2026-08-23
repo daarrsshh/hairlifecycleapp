@@ -4,7 +4,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 
 import { db } from '@/db/client';
 import { photos } from '@/db/schema';
-import { getActiveTreatmentPeriod } from '@/features/treatment/api';
+import { getActiveRoutine } from '@/features/routine/api';
 import { computeNextPhotoReminderDate } from '@/features/photos/photo-reminder';
 import { getAppSettings, setLastPhotoSetDate } from '@/features/onboarding/settings-api';
 import { dateStringAt, today, type DateString } from '@/lib/date';
@@ -26,7 +26,7 @@ function getPhotosDirectory() {
 export async function savePhoto(
   sourceUri: string,
   angle: PhotoAngle,
-  treatmentPeriodId: string | null,
+  routineId: string | null,
   date: DateString = today()
 ) {
   const id = randomUUID();
@@ -36,7 +36,7 @@ export async function savePhoto(
 
   await db.insert(photos).values({
     id,
-    treatmentPeriodId,
+    routineId,
     date,
     angle,
     filePath: destination.uri,
@@ -45,10 +45,10 @@ export async function savePhoto(
   return destination.uri;
 }
 
-/** Convenience wrapper for capture flows outside onboarding, where there's no treatment period object already in hand. */
+/** Convenience wrapper for capture flows outside onboarding, where there's no routine object already in hand. */
 export async function captureCurrentPhoto(sourceUri: string, angle: PhotoAngle) {
-  const period = await getActiveTreatmentPeriod();
-  return savePhoto(sourceUri, angle, period?.id ?? null);
+  const routine = await getActiveRoutine();
+  return savePhoto(sourceUri, angle, routine?.id ?? null);
 }
 
 export async function getAllPhotos() {

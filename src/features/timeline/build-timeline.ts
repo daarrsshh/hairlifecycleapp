@@ -1,19 +1,18 @@
 import type { PhotoAngle } from '@/features/photos/api';
 import type { DateString } from '@/lib/date';
 
-export interface TimelineTreatmentPeriod {
+export interface TimelineRoutine {
   id: string;
-  planType: string;
   startDate: DateString;
 }
 
-export interface TimelineDrug {
-  treatmentPeriodId: string;
-  drugName: string;
+export interface TimelineRoutineItem {
+  routineId: string;
+  name: string;
 }
 
 export interface TimelinePauseWindow {
-  treatmentPeriodId: string;
+  routineId: string;
   pausedAt: DateString;
   resumedAt: DateString | null;
 }
@@ -24,36 +23,41 @@ export interface TimelinePhoto {
 }
 
 export type TimelineEvent =
-  | { type: 'treatment-started'; date: DateString; periodId: string; label: string; drugNames: string[] }
-  | { type: 'treatment-paused'; date: DateString; periodId: string }
-  | { type: 'treatment-resumed'; date: DateString; periodId: string }
+  | { type: 'routine-started'; date: DateString; routineId: string; label: string; itemNames: string[] }
+  | { type: 'routine-paused'; date: DateString; routineId: string }
+  | { type: 'routine-resumed'; date: DateString; routineId: string }
   | { type: 'photos'; date: DateString; angles: PhotoAngle[] };
 
-/** Merges treatment period/pause history and photo captures into one chronological feed (PRD §5.6: photos + treatment changes are the only two layers in v1). */
+/**
+ * Merges routine/pause history and photo captures into one chronological feed (PRD §5.6:
+ * photos + routine changes are the only two layers in v1). The routine's label is derived from
+ * its live item list rather than a stored string, so a renamed or edited routine never shows a
+ * stale name.
+ */
 export function buildTimeline(
-  periods: TimelineTreatmentPeriod[],
-  drugs: TimelineDrug[],
+  routines: TimelineRoutine[],
+  items: TimelineRoutineItem[],
   pauseWindows: TimelinePauseWindow[],
   photos: TimelinePhoto[],
-  describeTreatment: (planType: string, drugs: { drugName: string }[]) => string
+  describeRoutine: (items: { name: string }[]) => string
 ): TimelineEvent[] {
   const events: TimelineEvent[] = [];
 
-  for (const period of periods) {
-    const periodDrugs = drugs.filter((d) => d.treatmentPeriodId === period.id);
+  for (const routine of routines) {
+    const routineItems = items.filter((i) => i.routineId === routine.id);
     events.push({
-      type: 'treatment-started',
-      date: period.startDate,
-      periodId: period.id,
-      label: describeTreatment(period.planType, periodDrugs),
-      drugNames: periodDrugs.map((d) => d.drugName),
+      type: 'routine-started',
+      date: routine.startDate,
+      routineId: routine.id,
+      label: describeRoutine(routineItems),
+      itemNames: routineItems.map((i) => i.name),
     });
   }
 
   for (const pause of pauseWindows) {
-    events.push({ type: 'treatment-paused', date: pause.pausedAt, periodId: pause.treatmentPeriodId });
+    events.push({ type: 'routine-paused', date: pause.pausedAt, routineId: pause.routineId });
     if (pause.resumedAt) {
-      events.push({ type: 'treatment-resumed', date: pause.resumedAt, periodId: pause.treatmentPeriodId });
+      events.push({ type: 'routine-resumed', date: pause.resumedAt, routineId: pause.routineId });
     }
   }
 

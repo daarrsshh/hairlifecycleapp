@@ -11,9 +11,12 @@ export const profiles = sqliteTable('profiles', {
     .default(sql`(current_timestamp)`),
 });
 
-export const treatmentPeriods = sqliteTable('treatment_periods', {
+/**
+ * One personal routine = a bundle of items the user follows together. Starting a new routine
+ * ends the previous one rather than editing it, so history stays intact (PRD §5.5).
+ */
+export const routines = sqliteTable('routines', {
   id: text('id').primaryKey(),
-  planType: text('plan_type').notNull(), // preset key, or 'custom'
   startDate: text('start_date').notNull(), // YYYY-MM-DD
   endDate: text('end_date'),
   status: text('status', { enum: ['active', 'paused', 'ended'] })
@@ -24,50 +27,64 @@ export const treatmentPeriods = sqliteTable('treatment_periods', {
     .default(sql`(current_timestamp)`),
 });
 
-// A period can be paused and resumed multiple times; each cycle is its own row
-// so the Timeline can render every pause as a distinct dashed segment (PRD §5.6).
-export const treatmentPausePeriods = sqliteTable('treatment_pause_periods', {
+// A routine can be paused and resumed multiple times; each cycle is its own row so the
+// Timeline can render every pause as a distinct segment (PRD §5.6).
+export const routinePausePeriods = sqliteTable('routine_pause_periods', {
   id: text('id').primaryKey(),
-  treatmentPeriodId: text('treatment_period_id')
+  routineId: text('routine_id')
     .notNull()
-    .references(() => treatmentPeriods.id),
+    .references(() => routines.id),
   pausedAt: text('paused_at').notNull(), // YYYY-MM-DD
   resumeExpectedAt: text('resume_expected_at'),
   resumedAt: text('resumed_at'), // null while still paused
 });
 
-export const treatmentPeriodDrugs = sqliteTable('treatment_period_drugs', {
+/**
+ * A single thing the user does — a pill, a topical, or a device session — carrying its own
+ * schedule. This is what makes "Minoxidil twice daily + Finasteride each morning + LLLT on
+ * Mon/Wed/Fri" expressible; there are no fixed AM/PM slots anywhere in the model.
+ *
+ * `daysOfWeek` is 0(Sun)–6(Sat). `times` is a list of 'HH:MM' — more than one entry means the
+ * item is done multiple times on each scheduled day, and each time is logged independently.
+ */
+export const routineItems = sqliteTable('routine_items', {
   id: text('id').primaryKey(),
-  treatmentPeriodId: text('treatment_period_id')
+  routineId: text('routine_id')
     .notNull()
-    .references(() => treatmentPeriods.id),
-  drugName: text('drug_name').notNull(),
+    .references(() => routines.id),
+  type: text('type', { enum: ['oral', 'topical', 'device'] }).notNull(),
+  name: text('name').notNull(),
   dosage: text('dosage'),
-  frequency: text('frequency'),
-  slot: text('slot', { enum: ['am', 'pm', 'both'] }).notNull(),
+  daysOfWeek: text('days_of_week', { mode: 'json' }).$type<number[]>().notNull(),
+  times: text('times', { mode: 'json' }).$type<string[]>().notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
 });
 
+/**
+ * One row per (item, date, time) — so when someone takes their morning Minoxidil but skips
+ * the evening one, or takes Finasteride but not Minoxidil, the record says exactly which.
+ */
 export const doseLogs = sqliteTable(
   'dose_logs',
   {
     id: text('id').primaryKey(),
-    treatmentPeriodId: text('treatment_period_id')
+    routineItemId: text('routine_item_id')
       .notNull()
-      .references(() => treatmentPeriods.id),
+      .references(() => routineItems.id),
     date: text('date').notNull(), // YYYY-MM-DD
-    slot: text('slot', { enum: ['am', 'pm'] }).notNull(),
+    time: text('time').notNull(), // 'HH:MM', matching one of the item's scheduled times
     state: text('state', { enum: ['pending', 'taken', 'skipped', 'missed'] })
       .notNull()
       .default('pending'),
     locked: integer('locked', { mode: 'boolean' }).notNull().default(false),
     respondedAt: text('responded_at'),
   },
-  (table) => [uniqueIndex('dose_logs_period_date_slot').on(table.treatmentPeriodId, table.date, table.slot)]
+  (table) => [uniqueIndex('dose_logs_item_date_time').on(table.routineItemId, table.date, table.time)]
 );
 
 export const photos = sqliteTable('photos', {
   id: text('id').primaryKey(),
-  treatmentPeriodId: text('treatment_period_id').references(() => treatmentPeriods.id),
+  routineId: text('routine_id').references(() => routines.id),
   date: text('date').notNull(),
   angle: text('angle', {
     enum: ['crown', 'hairline', 'left_temple', 'right_temple'],
@@ -80,8 +97,6 @@ export const photos = sqliteTable('photos', {
 
 export const appSettings = sqliteTable('app_settings', {
   id: text('id').primaryKey().default('singleton'),
-  reminderAmTime: text('reminder_am_time').notNull().default('08:00'),
-  reminderPmTime: text('reminder_pm_time').notNull().default('20:00'),
   photoReminderIntervalDays: integer('photo_reminder_interval_days').notNull().default(15),
   notificationsEnabled: integer('notifications_enabled', { mode: 'boolean' })
     .notNull()

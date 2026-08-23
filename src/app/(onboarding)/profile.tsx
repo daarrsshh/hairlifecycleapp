@@ -82,7 +82,7 @@ export default function ProfileScreen() {
           style={[styles.button, { backgroundColor: theme.primary, opacity: canContinue ? 1 : 0.4 }]}
           onPress={() => {
             setProfile({ name: name.trim(), age: age ? Number(age) : null, hairLossType });
-            router.push('/(onboarding)/treatment-select');
+            router.push('/(onboarding)/routine');
           }}>
           <ThemedText style={{ color: theme.onPrimary }} type="smallBold">
             Continue

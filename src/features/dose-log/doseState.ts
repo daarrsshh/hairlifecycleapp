@@ -1,12 +1,14 @@
 import { isBefore } from '@/lib/date';
 import type { DateString } from '@/lib/date';
 
-export type DoseSlot = 'am' | 'pm';
+export type RoutineItemType = 'oral' | 'topical' | 'device';
 export type DoseState = 'pending' | 'taken' | 'skipped' | 'missed';
 
+/** A dose log is keyed to a specific item *and* time, so "took the morning one, skipped the evening one" is representable. */
 export interface DoseLogRecord {
+  routineItemId: string;
   date: DateString;
-  slot: DoseSlot;
+  time: string; // 'HH:MM'
   state: DoseState;
   locked: boolean;
   respondedAt: string | null;
@@ -18,8 +20,8 @@ export function isEditable(log: Pick<DoseLogRecord, 'locked'> | undefined): bool
 }
 
 /**
- * The state to *display* for a required slot, reconciling a stale/missing row against
- * "today" without needing a background job: any unresolved slot from a past day reads
+ * The state to *display* for a scheduled dose, reconciling a stale/missing row against
+ * "today" without needing a background job: any unresolved dose from a past day reads
  * as Missed even before a reconciliation pass has persisted that row.
  */
 export function computeEffectiveState(
@@ -49,86 +51,130 @@ export function computeRepromptTime(respondedAt: Date): Date | null {
   return candidate;
 }
 
-export interface TreatmentPeriodRange {
+export interface RoutineRange {
   id: string;
   startDate: DateString;
   endDate: DateString | null;
 }
 
 export interface PauseWindow {
-  treatmentPeriodId: string;
+  routineId: string;
   pausedAt: DateString;
   resumedAt: DateString | null;
 }
 
-export interface DrugSlotConfig {
-  treatmentPeriodId: string;
-  slot: DoseSlot | 'both';
+export interface RoutineItemSchedule {
+  id: string;
+  routineId: string;
+  type: RoutineItemType;
+  name: string;
+  dosage: string | null;
+  daysOfWeek: number[]; // 0 = Sunday … 6 = Saturday
+  times: string[]; // 'HH:MM', one entry per time it's done on a scheduled day
 }
 
-function isPausedOnDate(periodId: string, date: DateString, pauseWindows: PauseWindow[]): boolean {
+/** One thing to log: a specific item at a specific time on a specific day. */
+export interface ScheduledDose {
+  itemId: string;
+  time: string;
+}
+
+function isPausedOnDate(routineId: string, date: DateString, pauseWindows: PauseWindow[]): boolean {
   return pauseWindows.some(
     (w) =>
-      w.treatmentPeriodId === periodId &&
+      w.routineId === routineId &&
       !isBefore(date, w.pausedAt) &&
       (w.resumedAt === null || isBefore(date, w.resumedAt))
   );
 }
 
-/** Which treatment period (if any) covered a given date — a past date can fall under a since-ended period. */
-export function findPeriodForDate<T extends TreatmentPeriodRange>(
-  periods: T[],
-  date: DateString
-): T | undefined {
-  return periods.find(
-    (p) => !isBefore(date, p.startDate) && (p.endDate === null || !isBefore(p.endDate, date))
+/** Which routine (if any) covered a given date — a past date can fall under a since-ended routine. */
+export function findRoutineForDate<T extends RoutineRange>(routines: T[], date: DateString): T | undefined {
+  return routines.find(
+    (r) => !isBefore(date, r.startDate) && (r.endDate === null || !isBefore(r.endDate, date))
   );
 }
 
-/** Which slots (if any) a user was actually expected to log on a given date — empty before/after any period, or during a pause. */
-export function getRequiredSlots(
-  date: DateString,
-  periods: TreatmentPeriodRange[],
-  pauseWindows: PauseWindow[],
-  drugs: DrugSlotConfig[]
-): DoseSlot[] {
-  const period = findPeriodForDate(periods, date);
-  if (!period) return [];
-  if (isPausedOnDate(period.id, date, pauseWindows)) return [];
+export function dayOfWeek(date: DateString): number {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(year, month - 1, day).getDay();
+}
 
-  const slots = new Set<DoseSlot>();
-  for (const drug of drugs) {
-    if (drug.treatmentPeriodId !== period.id) continue;
-    if (drug.slot === 'both') {
-      slots.add('am');
-      slots.add('pm');
-    } else {
-      slots.add(drug.slot);
+/**
+ * Everything the user was actually expected to do on a given date — empty before/after any
+ * routine, during a pause, or on a day none of the items are scheduled for (e.g. a
+ * Mon/Wed/Fri device on a Tuesday). Ordered by time, then by the item's own sort order.
+ */
+export function getScheduledDoses(
+  date: DateString,
+  routines: RoutineRange[],
+  pauseWindows: PauseWindow[],
+  items: RoutineItemSchedule[]
+): ScheduledDose[] {
+  const routine = findRoutineForDate(routines, date);
+  if (!routine) return [];
+  if (isPausedOnDate(routine.id, date, pauseWindows)) return [];
+
+  const weekday = dayOfWeek(date);
+  const doses: ScheduledDose[] = [];
+
+  for (const item of items) {
+    if (item.routineId !== routine.id) continue;
+    if (!item.daysOfWeek.includes(weekday)) continue;
+    for (const time of item.times) {
+      doses.push({ itemId: item.id, time });
     }
   }
-  return [...slots];
+
+  return doses.sort((a, b) => a.time.localeCompare(b.time));
 }
 
 export type DayStatus = 'no-treatment' | 'in-progress' | 'complete' | 'incomplete';
 
+export interface DayProgress {
+  status: DayStatus;
+  /** Doses logged as taken, out of everything scheduled that day — drives "5 of 6 today". */
+  taken: number;
+  total: number;
+}
+
+function findLog(logs: DoseLogRecord[], dose: ScheduledDose): DoseLogRecord | undefined {
+  return logs.find((l) => l.routineItemId === dose.itemId && l.time === dose.time);
+}
+
 /**
- * Rolls a day's required slots up into one status. `in-progress` only ever applies to
- * `currentDate` itself — some required slot is still genuinely pending, not yet resolved.
+ * Rolls a day's scheduled doses up into one status plus a taken/total count. `in-progress`
+ * only ever applies to `currentDate` itself — some dose is still genuinely pending.
  */
+export function resolveDayProgress(
+  date: DateString,
+  scheduled: ScheduledDose[],
+  logsForDate: DoseLogRecord[],
+  currentDate: DateString
+): DayProgress {
+  if (scheduled.length === 0) {
+    return { status: 'no-treatment', taken: 0, total: 0 };
+  }
+
+  const states = scheduled.map((dose) => computeEffectiveState(findLog(logsForDate, dose), date, currentDate));
+  const taken = states.filter((s) => s === 'taken').length;
+  const total = states.length;
+
+  if (states.some((s) => s === 'missed' || s === 'skipped')) {
+    return { status: 'incomplete', taken, total };
+  }
+  if (taken === total) {
+    return { status: 'complete', taken, total };
+  }
+  return { status: 'in-progress', taken, total };
+}
+
+/** Convenience wrapper for the many callers that only care about the rolled-up status. */
 export function resolveDayStatus(
   date: DateString,
-  requiredSlots: DoseSlot[],
+  scheduled: ScheduledDose[],
   logsForDate: DoseLogRecord[],
   currentDate: DateString
 ): DayStatus {
-  if (requiredSlots.length === 0) return 'no-treatment';
-
-  const states = requiredSlots.map((slot) => {
-    const log = logsForDate.find((l) => l.slot === slot);
-    return computeEffectiveState(log, date, currentDate);
-  });
-
-  if (states.some((s) => s === 'missed' || s === 'skipped')) return 'incomplete';
-  if (states.every((s) => s === 'taken')) return 'complete';
-  return 'in-progress';
+  return resolveDayProgress(date, scheduled, logsForDate, currentDate).status;
 }
