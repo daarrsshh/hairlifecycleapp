@@ -44,8 +44,15 @@ export default function NewRoutineScreen() {
   useEffect(() => {
     if (seeded.current || !current?.routine) return;
     seeded.current = true;
+
+    // Read the store directly rather than through the render closure: this query resolves
+    // asynchronously, so by now the user may already have added items — going to the item
+    // builder and back is faster than the query on a warm screen. Seeding unconditionally
+    // (with a reset) silently discarded whatever they'd just built and replaced it with the
+    // old routine, which looked like the new item saving with the wrong schedule.
+    if (useRoutineDraft.getState().items.length > 0) return;
+
     // Writing to the zustand store is updating an external system — the intended use of an effect.
-    draft.reset();
     for (const item of current.items) {
       draft.addItem({
         type: item.type,

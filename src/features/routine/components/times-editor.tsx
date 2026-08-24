@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { dateToTimeString, timeStringToDate } from '@/components/time-picker-field';
 import { Spacing } from '@/constants/theme';
 import { formatTime } from '@/features/routine/describe';
+import { addTime, removeTime, replaceTime } from '@/features/routine/times';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -20,12 +21,11 @@ export function TimesEditor({ value, onChange }: { value: string[]; onChange: (t
   const [adding, setAdding] = useState(false);
 
   function commit(index: number, time: string) {
-    const next = value.map((t, i) => (i === index ? time : t));
-    onChange([...new Set(next)].sort());
+    onChange(replaceTime(value, index, time));
   }
 
   function add(time: string) {
-    onChange([...new Set([...value, time])].sort());
+    onChange(addTime(value, time));
   }
 
   const pickerIndex = adding ? -1 : editingIndex;
@@ -38,7 +38,7 @@ export function TimesEditor({ value, onChange }: { value: string[]; onChange: (t
             <ThemedText type="smallBold">{formatTime(time)}</ThemedText>
           </Pressable>
           {value.length > 1 ? (
-            <Pressable onPress={() => onChange(value.filter((_, i) => i !== index))}>
+            <Pressable onPress={() => onChange(removeTime(value, index))}>
               <ThemedText themeColor="textSecondary" type="small">
                 Remove
               </ThemedText>

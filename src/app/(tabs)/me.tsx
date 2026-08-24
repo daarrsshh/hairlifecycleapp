@@ -9,6 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { getAppSettings, setNotificationsEnabled } from '@/features/onboarding/settings-api';
 import { getAllRoutineItems } from '@/features/routine/api';
+import { useRoutineDraft } from '@/features/routine/draft-store';
 import { useTheme } from '@/hooks/use-theme';
 import { cancelAllDoseReminders, rescheduleRoutineReminders } from '@/lib/notifications';
 
@@ -60,7 +61,7 @@ export default function MeScreen() {
             <ThemedText themeColor="textSecondary" type="small">
               Reminder times come from each item&apos;s own schedule — edit them in your routine.
             </ThemedText>
-            <LinkButton href="/routine/new">
+            <LinkButton href="/routine/new" onPress={() => useRoutineDraft.getState().reset()}>
                 <ThemedText type="linkPrimary">Edit routine &amp; reminder times</ThemedText>
               </LinkButton>
           </ThemedView>

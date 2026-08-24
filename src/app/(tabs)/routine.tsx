@@ -10,6 +10,7 @@ import { Spacing } from '@/constants/theme';
 import { ITEM_TYPE_LABEL } from '@/features/routine/catalog';
 import { ITEM_TYPE_ICON } from '@/features/routine/components/routine-builder';
 import { describeRoutine, describeSchedule } from '@/features/routine/describe';
+import { useRoutineDraft } from '@/features/routine/draft-store';
 import {
   getActiveRoutine,
   getItemsForRoutine,
@@ -95,11 +96,13 @@ export default function RoutineScreen() {
           <LinkButton href="/routine/weekly">
               <ThemedText type="linkPrimary">View your week</ThemedText>
             </LinkButton>
-          <LinkButton href="/routine/new">
-              <ThemedText type="linkPrimary">
-                {routine ? 'Start new routine' : 'Set up your routine'}
-              </ThemedText>
-            </LinkButton>
+          {/* Clear any abandoned draft so the flow seeds from the current routine.
+              Navigation *within* the flow must not reset, or the item builder would lose work. */}
+          <LinkButton href="/routine/new" onPress={() => useRoutineDraft.getState().reset()}>
+            <ThemedText type="linkPrimary">
+              {routine ? 'Start new routine' : 'Set up your routine'}
+            </ThemedText>
+          </LinkButton>
           <LinkButton href="/timeline">
               <ThemedText type="linkPrimary">View timeline</ThemedText>
             </LinkButton>
