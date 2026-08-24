@@ -10,13 +10,11 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useWeeklyProgress } from '@/features/consistency/hooks';
 import { WeekStrip } from '@/features/consistency/components/week-strip';
-import { DosePips } from '@/features/dose-log/components/dose-pips';
-import type { DoseState } from '@/features/dose-log/doseState';
-import { useLogDose, useTodayDoses, type TodayDose } from '@/features/dose-log/hooks';
+import { DoseRow } from '@/features/dose-log/components/dose-row';
+import { useLogDose, useTodayDoses } from '@/features/dose-log/hooks';
 import { getAppSettings } from '@/features/onboarding/settings-api';
 import { isPhotoReminderDue } from '@/features/photos/photo-reminder';
 import { ITEM_TYPE_ICON } from '@/features/routine/components/routine-builder';
-import { formatTime } from '@/features/routine/describe';
 import { resumeRoutine } from '@/features/routine/api';
 import { useTheme } from '@/hooks/use-theme';
 import { today } from '@/lib/date';
@@ -50,7 +48,7 @@ export default function HomeScreen() {
     );
   }
 
-  const { routine, timeBlocks, takenCount, totalCount } = data;
+  const { routine, todayItems, takenCount, totalCount } = data;
   const currentDate = today();
 
   if (!routine) {
@@ -124,51 +122,50 @@ export default function HomeScreen() {
             </LinkButton>
         ) : null}
 
-        {timeBlocks.length === 0 && routine.status !== 'paused' ? (
+        {todayItems.length === 0 && routine.status !== 'paused' ? (
           <ThemedText themeColor="textSecondary">Nothing scheduled today.</ThemedText>
         ) : null}
 
-        {timeBlocks.map((block) => (
-          <ThemedView key={block.time} style={styles.block}>
-            <ThemedText type="smallBold" themeColor="textSecondary">
-              {block.label} · {formatTime(block.time)}
-            </ThemedText>
+        {/* One card per item, with a row per dose — so an item taken twice a day reads as one
+            thing done twice, while each dose is still logged independently. */}
+        {todayItems.map((item) => (
+          <ThemedView key={item.itemId} type="backgroundElement" style={styles.itemCard}>
+            <ThemedView type="backgroundElement" style={styles.itemHeader}>
+              <SymbolView name={ITEM_TYPE_ICON[item.type]} size={20} tintColor={theme.primary} />
+              <ThemedText type="smallBold" style={styles.itemName}>
+                {item.name}
+                {item.dosage ? ` · ${item.dosage}` : ''}
+              </ThemedText>
+              {item.doses.length > 1 ? (
+                <ThemedText type="small" themeColor="textSecondary">
+                  {item.takenCount} of {item.doses.length}
+                </ThemedText>
+              ) : null}
+            </ThemedView>
 
-            {block.doses.map((dose) => (
-              <ThemedView key={`${dose.itemId}-${dose.time}`} type="backgroundElement" style={styles.doseCard}>
-                <ThemedView type="backgroundElement" style={styles.doseHeader}>
-                  <SymbolView name={ITEM_TYPE_ICON[dose.type]} size={20} tintColor={theme.primary} />
-                  <ThemedText type="smallBold">
-                    {dose.name}
-                    {dose.dosage ? ` · ${dose.dosage}` : ''}
-                  </ThemedText>
-                </ThemedView>
-
-                {dose.doseCount > 1 ? (
-                  <DosePips states={dose.itemDoseStates} currentIndex={dose.doseIndex} />
-                ) : null}
-
-                <StateActions
-                  state={dose.state}
-                  onTaken={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    logDose.mutate({
-                      routineItemId: dose.itemId,
-                      date: currentDate,
-                      time: dose.time,
-                      state: 'taken',
-                    });
-                  }}
-                  onSkip={() =>
-                    logDose.mutate({
-                      routineItemId: dose.itemId,
-                      date: currentDate,
-                      time: dose.time,
-                      state: 'skipped',
-                    })
-                  }
-                />
-              </ThemedView>
+            {item.doses.map((dose) => (
+              <DoseRow
+                key={dose.time}
+                time={dose.time}
+                state={dose.state}
+                onTaken={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  logDose.mutate({
+                    routineItemId: item.itemId,
+                    date: currentDate,
+                    time: dose.time,
+                    state: 'taken',
+                  });
+                }}
+                onSkip={() =>
+                  logDose.mutate({
+                    routineItemId: item.itemId,
+                    date: currentDate,
+                    time: dose.time,
+                    state: 'skipped',
+                  })
+                }
+              />
             ))}
           </ThemedView>
         ))}
@@ -176,46 +173,6 @@ export default function HomeScreen() {
     </ThemedView>
   );
 }
-
-function StateActions({
-  state,
-  onTaken,
-  onSkip,
-}: {
-  state: DoseState;
-  onTaken: () => void;
-  onSkip: () => void;
-}) {
-  const theme = useTheme();
-
-  if (state === 'taken') {
-    return <ThemedText style={{ color: theme.taken }}>✓ Taken</ThemedText>;
-  }
-  if (state === 'skipped' || state === 'missed') {
-    // Skipped and Missed look identical (icon + color, no distinguishing text) — the
-    // deliberate-vs-forgotten distinction is data-only (PRD §5.2/§9). Missed alone stays
-    // tappable, since — unlike a locked Skip — it's still open to a late Taken.
-    const notTaken = <ThemedText style={{ color: theme.missed }}>– Not taken</ThemedText>;
-    return state === 'missed' ? <Pressable onPress={onTaken}>{notTaken}</Pressable> : notTaken;
-  }
-
-  return (
-    <ThemedView type="backgroundElement" style={styles.actionsRow}>
-      <Pressable onPress={onTaken} style={[styles.actionButton, { backgroundColor: theme.primary }]}>
-        <ThemedText style={{ color: theme.onPrimary }} type="smallBold">
-          Taken
-        </ThemedText>
-      </Pressable>
-      <Pressable onPress={onSkip} style={styles.actionButton}>
-        <ThemedText themeColor="textSecondary" type="smallBold">
-          Skip
-        </ThemedText>
-      </Pressable>
-    </ThemedView>
-  );
-}
-
-export type { TodayDose };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -238,13 +195,7 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     borderRadius: Spacing.three,
   },
-  block: { gap: Spacing.two },
-  doseCard: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
-  doseHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  actionsRow: { flexDirection: 'row', gap: Spacing.two },
-  actionButton: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.four,
-    borderRadius: Spacing.three,
-  },
+  itemCard: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.one },
+  itemHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginBottom: Spacing.one },
+  itemName: { flex: 1 },
 });

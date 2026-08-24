@@ -8,29 +8,26 @@ import {
   type RoutineItemType,
 } from '@/features/dose-log/doseState';
 import { getActiveRoutine, getAllRoutineItems } from '@/features/routine/api';
-import { timeOfDayLabel } from '@/features/routine/describe';
 import { today } from '@/lib/date';
 
+/** One occurrence of an item on a given day — the unit that actually gets logged. */
 export interface TodayDose {
-  itemId: string;
   time: string;
+  state: DoseState;
+}
+
+/**
+ * A routine item plus every time it's due today. Home shows one card per item with a row per
+ * dose, so a twice-daily item reads as one thing done twice rather than as two unrelated
+ * entries — while each dose is still logged independently.
+ */
+export interface TodayItem {
+  itemId: string;
   name: string;
   dosage: string | null;
   type: RoutineItemType;
-  state: DoseState;
-  /** This dose's position among today's doses for the same item, 0-based. */
-  doseIndex: number;
-  /** How many times this item is due today — >1 means it appears in several time blocks. */
-  doseCount: number;
-  /** Every one of today's doses for this item, in time order, so a card can show overall progress. */
-  itemDoseStates: DoseState[];
-}
-
-/** Doses due at the same time, shown as one block ("Morning · 8:00 AM"). */
-export interface TodayTimeBlock {
-  time: string;
-  label: string;
-  doses: TodayDose[];
+  doses: TodayDose[]; // time order
+  takenCount: number;
 }
 
 export function useTodayDoses() {
@@ -46,7 +43,6 @@ export function useTodayDoses() {
       ]);
 
       const byId = new Map(items.map((i) => [i.id, i]));
-
       const stateFor = (itemId: string, time: string) =>
         computeEffectiveState(
           logs.find((l: DoseLogRecord) => l.routineItemId === itemId && l.time === time),
@@ -54,45 +50,39 @@ export function useTodayDoses() {
           date
         );
 
-      // `scheduled` is time-ordered, so an item's doses are collected in the order they're due —
-      // which is what makes "dose 2 of 2" meaningful.
-      const timesByItem = new Map<string, string[]>();
-      for (const dose of scheduled) {
-        timesByItem.set(dose.itemId, [...(timesByItem.get(dose.itemId) ?? []), dose.time]);
-      }
-
-      const blocks = new Map<string, TodayTimeBlock>();
+      // `scheduled` is time-ordered, so each item's doses accumulate in the order they're due.
+      const byItem = new Map<string, TodayItem>();
       for (const dose of scheduled) {
         const item = byId.get(dose.itemId);
         if (!item) continue;
 
-        const itemTimes = timesByItem.get(dose.itemId) ?? [dose.time];
-        const block = blocks.get(dose.time) ?? {
-          time: dose.time,
-          label: timeOfDayLabel(dose.time),
-          doses: [],
-        };
-        block.doses.push({
-          itemId: dose.itemId,
-          time: dose.time,
-          name: item.name,
-          dosage: item.dosage,
-          type: item.type,
-          state: stateFor(dose.itemId, dose.time),
-          doseIndex: itemTimes.indexOf(dose.time),
-          doseCount: itemTimes.length,
-          itemDoseStates: itemTimes.map((t) => stateFor(dose.itemId, t)),
-        });
-        blocks.set(dose.time, block);
+        const entry =
+          byItem.get(dose.itemId) ??
+          ({
+            itemId: dose.itemId,
+            name: item.name,
+            dosage: item.dosage,
+            type: item.type,
+            doses: [],
+            takenCount: 0,
+          } satisfies TodayItem);
+
+        const state = stateFor(dose.itemId, dose.time);
+        entry.doses.push({ time: dose.time, state });
+        if (state === 'taken') entry.takenCount++;
+        byItem.set(dose.itemId, entry);
       }
 
-      const timeBlocks = [...blocks.values()].sort((a, b) => a.time.localeCompare(b.time));
-      const allDoses = timeBlocks.flatMap((b) => b.doses);
+      // Earliest-due item first, so what's most imminent is at the top.
+      const todayItems = [...byItem.values()].sort((a, b) =>
+        a.doses[0].time.localeCompare(b.doses[0].time)
+      );
+      const allDoses = todayItems.flatMap((i) => i.doses);
 
       return {
         date,
         routine,
-        timeBlocks,
+        todayItems,
         takenCount: allDoses.filter((d) => d.state === 'taken').length,
         totalCount: allDoses.length,
       };
