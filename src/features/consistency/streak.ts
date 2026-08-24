@@ -1,29 +1,54 @@
-import type { DayStatus } from '@/features/dose-log/doseState';
+import { dayOfWeek, type DayStatus } from '@/features/dose-log/doseState';
 import { addDays, isBefore, type DateString } from '@/lib/date';
 
 export type DayStatusResolver = (date: DateString) => DayStatus;
 
-export interface RecentDay {
+export interface WeekDay {
   date: DateString;
   status: DayStatus;
   isToday: boolean;
+  /** Later this week — hasn't happened yet, so it must not be scored or styled as active. */
+  isFuture: boolean;
+}
+
+/** Start-of-week as a JS day index: 1 = Monday (ISO), 0 = Sunday (US convention). */
+export type WeekStartsOn = 0 | 1;
+
+/** The date of the week-start on or before `date`. */
+export function startOfWeek(date: DateString, weekStartsOn: WeekStartsOn = 1): DateString {
+  const offset = (dayOfWeek(date) - weekStartsOn + 7) % 7;
+  return addDays(date, -offset);
 }
 
 /**
- * The last `days` days ending today, oldest first — backs Home's week strip. Bounded by
- * construction, unlike the streak walk-back.
+ * The current calendar week, oldest first — backs Home's week strip. A calendar week rather
+ * than a rolling 7 days because the card is labelled "This week", and a rolling window makes
+ * the strip start on an arbitrary weekday.
+ *
+ * Days later in the week are marked `isFuture`: their status would otherwise resolve to
+ * `in-progress` (nothing logged yet, not in the past), which would render them as if they were
+ * underway. Bounded by construction, unlike the streak walk-back.
  */
-export function computeRecentDays(
+export function computeCalendarWeek(
   currentDate: DateString,
-  days: number,
-  dayStatus: DayStatusResolver
-): RecentDay[] {
-  const result: RecentDay[] = [];
-  for (let offset = days - 1; offset >= 0; offset--) {
-    const date = addDays(currentDate, -offset);
-    result.push({ date, status: dayStatus(date), isToday: offset === 0 });
+  dayStatus: DayStatusResolver,
+  weekStartsOn: WeekStartsOn = 1
+): WeekDay[] {
+  const start = startOfWeek(currentDate, weekStartsOn);
+  const days: WeekDay[] = [];
+
+  for (let offset = 0; offset < 7; offset++) {
+    const date = addDays(start, offset);
+    const isFuture = isBefore(currentDate, date);
+    days.push({
+      date,
+      status: isFuture ? 'no-treatment' : dayStatus(date),
+      isToday: date === currentDate,
+      isFuture,
+    });
   }
-  return result;
+
+  return days;
 }
 
 /**

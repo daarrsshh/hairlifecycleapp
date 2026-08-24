@@ -5,17 +5,18 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import type { DayStatus } from '@/features/dose-log/doseState';
 import { dayOfWeek } from '@/features/dose-log/doseState';
-import type { RecentDay } from '@/features/consistency/streak';
+import type { WeekDay } from '@/features/consistency/streak';
 import { useTheme } from '@/hooks/use-theme';
 
 const WEEKDAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 /**
- * Seven days at a glance. Deliberately non-punishing (PRD §9): a missed day is simply an
- * unfilled dot in the muted "not taken" grey — never red, never an X, and days with nothing
- * scheduled read as neutral rather than as failures.
+ * The calendar week at a glance, Monday first. Deliberately non-punishing (PRD §9): a missed
+ * day is simply an unfilled dot in the muted "not taken" grey — never red, never an X — and
+ * days with nothing scheduled read as neutral rather than as failures. Days still to come are
+ * dimmed so the week reads as in progress rather than already half-failed.
  */
-export function WeekStrip({ days }: { days: RecentDay[] }) {
+export function WeekStrip({ days }: { days: WeekDay[] }) {
   const theme = useTheme();
 
   const fillFor = (status: DayStatus) => {
@@ -28,7 +29,7 @@ export function WeekStrip({ days }: { days: RecentDay[] }) {
   return (
     <ThemedView style={styles.row}>
       {days.map((day) => (
-        <View key={day.date} style={styles.cell}>
+        <View key={day.date} style={[styles.cell, day.isFuture && styles.futureCell]}>
           <ThemedText type="small" themeColor="textSecondary" style={styles.label}>
             {WEEKDAY_INITIALS[dayOfWeek(day.date)]}
           </ThemedText>
@@ -51,6 +52,7 @@ export function WeekStrip({ days }: { days: RecentDay[] }) {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   cell: { alignItems: 'center', gap: Spacing.one, flex: 1 },
+  futureCell: { opacity: 0.4 },
   label: { fontSize: 11 },
   dot: { width: 22, height: 22, borderRadius: 11 },
 });

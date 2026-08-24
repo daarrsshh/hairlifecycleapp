@@ -17,11 +17,12 @@ import {
   computeItemConsistency,
   computeMonthRatio,
   computeRangeRatio,
-  computeRecentDays,
+  computeCalendarWeek,
+  startOfWeek,
   type DayStatusResolver,
-  type RecentDay,
+  type WeekDay,
 } from '@/features/consistency/streak';
-import { addDays, today } from '@/lib/date';
+import { today } from '@/lib/date';
 
 export async function loadConsistencyContext() {
   const { routines, items, pauseWindows } = await loadDosingContext();
@@ -67,9 +68,9 @@ export async function loadConsistencyContext() {
 }
 
 export interface WeeklyProgress {
-  days: RecentDay[];
+  days: WeekDay[];
   currentStreak: number;
-  /** Days fully done vs. days that actually had something scheduled, over the last 7. */
+  /** Days fully done vs. days that had something scheduled, over the calendar week so far. */
   completed: number;
   total: number;
 }
@@ -83,10 +84,12 @@ export function useWeeklyProgress() {
     queryKey: ['streak', 'weekly'],
     queryFn: async (): Promise<WeeklyProgress> => {
       const { dayStatus, currentDate, earliestStart } = await loadConsistencyContext();
-      const weekStart = addDays(currentDate, -6);
+      // Ratio spans the calendar week so far — computeRangeRatio caps at currentDate, so
+      // days later this week aren't counted against you.
+      const weekStart = startOfWeek(currentDate);
       const { completed, total } = computeRangeRatio(weekStart, currentDate, currentDate, dayStatus);
       return {
-        days: computeRecentDays(currentDate, 7, dayStatus),
+        days: computeCalendarWeek(currentDate, dayStatus),
         currentStreak: computeCurrentStreak(currentDate, dayStatus, earliestStart),
         completed,
         total,
@@ -106,7 +109,7 @@ export interface ConsistencyStats {
   currentStreak: number;
   bestStreak: number;
   monthRatio: { completed: number; total: number };
-  /** Per-item, over the last 7 days — "LLLT: 3 of 3 this week". */
+  /** Per-item, over the calendar week so far — "LLLT: 3 of 3 this week". */
   itemsThisWeek: ItemConsistencyRow[];
   monthDayStatuses: Record<string, DayStatus>;
   year: number;
@@ -126,7 +129,9 @@ export function useConsistencyStats() {
         : 0;
       const monthRatio = computeMonthRatio(year, month, ctx.currentDate, ctx.dayStatus);
 
-      const weekStart = addDays(ctx.currentDate, -6);
+      // Same calendar week as Home's strip — both surfaces say "this week", so they must mean
+      // the same thing rather than one being a rolling 7 days.
+      const weekStart = startOfWeek(ctx.currentDate);
       const itemsThisWeek = ctx.items.map((item) => ({
         itemId: item.id,
         name: item.name,

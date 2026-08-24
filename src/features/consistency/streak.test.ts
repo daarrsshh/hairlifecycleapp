@@ -5,7 +5,8 @@ import {
   computeCurrentStreak,
   computeMonthRatio,
   computeRangeRatio,
-  computeRecentDays,
+  computeCalendarWeek,
+  startOfWeek,
 } from './streak';
 
 function resolverFromMap(map: Record<string, DayStatus>, fallback: DayStatus = 'no-treatment') {
@@ -147,23 +148,67 @@ describe('computeRangeRatio', () => {
   });
 });
 
-describe('computeRecentDays', () => {
-  it('returns the window oldest-first, ending on today', () => {
-    const status = resolverFromMap({});
-    const days = computeRecentDays('2026-08-24', 7, status);
+describe('startOfWeek', () => {
+  it('returns Monday for a mid-week date', () => {
+    // 2026-08-24 is a Monday, 2026-08-27 a Thursday.
+    expect(startOfWeek('2026-08-27')).toBe('2026-08-24');
+  });
+
+  it('returns the same date when it is already the week start', () => {
+    expect(startOfWeek('2026-08-24')).toBe('2026-08-24');
+  });
+
+  it('treats Sunday as the end of the week, not the start', () => {
+    // 2026-08-23 is a Sunday — it belongs to the week beginning Mon 2026-08-17.
+    expect(startOfWeek('2026-08-23')).toBe('2026-08-17');
+  });
+
+  it('supports a Sunday-start week for locales that use it', () => {
+    expect(startOfWeek('2026-08-27', 0)).toBe('2026-08-23');
+  });
+});
+
+describe('computeCalendarWeek', () => {
+  const status = resolverFromMap({});
+
+  it('runs Monday to Sunday regardless of which day it is', () => {
+    const days = computeCalendarWeek('2026-08-27', status);
     expect(days).toHaveLength(7);
-    expect(days[0].date).toBe('2026-08-18');
-    expect(days[6].date).toBe('2026-08-24');
+    expect(days[0].date).toBe('2026-08-24'); // Monday
+    expect(days[6].date).toBe('2026-08-30'); // Sunday
+  });
+
+  it('starts on Monday even when today is Monday', () => {
+    const days = computeCalendarWeek('2026-08-24', status);
+    expect(days[0].date).toBe('2026-08-24');
+    expect(days[0].isToday).toBe(true);
   });
 
   it('flags only today', () => {
-    const days = computeRecentDays('2026-08-24', 7, resolverFromMap({}));
-    expect(days.filter((d) => d.isToday).map((d) => d.date)).toEqual(['2026-08-24']);
+    const days = computeCalendarWeek('2026-08-27', status);
+    expect(days.filter((d) => d.isToday).map((d) => d.date)).toEqual(['2026-08-27']);
   });
 
-  it('carries each day’s resolved status', () => {
-    const status = resolverFromMap({ '2026-08-23': 'complete', '2026-08-24': 'in-progress' });
-    const days = computeRecentDays('2026-08-24', 3, status);
-    expect(days.map((d) => d.status)).toEqual(['no-treatment', 'complete', 'in-progress']);
+  it('marks the rest of the week as future', () => {
+    const days = computeCalendarWeek('2026-08-27', status);
+    expect(days.filter((d) => d.isFuture).map((d) => d.date)).toEqual([
+      '2026-08-28',
+      '2026-08-29',
+      '2026-08-30',
+    ]);
+  });
+
+  it('never reports a future day as in-progress, even with items scheduled', () => {
+    // Without the guard a future day resolves to `in-progress` (nothing logged, not past yet),
+    // which would render tomorrow as though it were already underway.
+    const days = computeCalendarWeek('2026-08-24', () => 'in-progress');
+    expect(days.filter((d) => d.isFuture).every((d) => d.status === 'no-treatment')).toBe(true);
+    expect(days.find((d) => d.isToday)?.status).toBe('in-progress');
+  });
+
+  it('carries each elapsed day’s resolved status', () => {
+    const withData = resolverFromMap({ '2026-08-24': 'complete', '2026-08-25': 'incomplete' });
+    const days = computeCalendarWeek('2026-08-25', withData);
+    expect(days.slice(0, 2).map((d) => d.status)).toEqual(['complete', 'incomplete']);
   });
 });
