@@ -1,5 +1,5 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -34,19 +34,32 @@ export default function RoutineItemScreen() {
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>(existing?.daysOfWeek ?? [0, 1, 2, 3, 4, 5, 6]);
   const [times, setTimes] = useState<string[]>(existing?.times ?? ['08:00']);
 
+  // Once the schedule has been edited by hand, catalog defaults stop overwriting it. Editing an
+  // existing item counts as already-set, so reopening it never resets the user's own schedule.
+  const scheduleTouched = useRef(existing !== undefined);
+
   const suggestions = name.trim() ? searchCatalog(name).slice(0, 4) : [];
   const exactMatch = findCatalogEntry(name);
   const dosageSuggestions = exactMatch?.dosageSuggestions ?? [];
   const canSave = name.trim().length > 0 && daysOfWeek.length > 0 && times.length > 0;
 
-  /** Choosing a known treatment fills in its usual type and schedule as a starting point. */
-  function applyCatalogEntry(entryName: string) {
+  /** Fills in a known treatment's usual type and schedule as a starting point. */
+  function applyCatalogDefaults(entryName: string) {
     const entry = findCatalogEntry(entryName);
-    setName(entryName);
-    if (!entry) return;
+    if (!entry || scheduleTouched.current) return;
     setType(entry.type);
     setDaysOfWeek(entry.defaultDaysOfWeek);
     setTimes(entry.defaultTimes);
+  }
+
+  /**
+   * Applied on every keystroke, not just when a suggestion chip is tapped — typing "Minoxidil"
+   * in full hides the chips (it's an exact match), which previously meant its twice-daily
+   * default was silently skipped and the item was saved as once a day.
+   */
+  function handleNameChange(next: string) {
+    setName(next);
+    applyCatalogDefaults(next);
   }
 
   function save() {
@@ -72,7 +85,7 @@ export default function RoutineItemScreen() {
           <ThemedText type="smallBold">What is it?</ThemedText>
           <TextInput
             value={name}
-            onChangeText={setName}
+            onChangeText={handleNameChange}
             placeholder="e.g. Minoxidil"
             placeholderTextColor={theme.textSecondary}
             style={[styles.input, { color: theme.text, borderColor: theme.border }]}
@@ -82,7 +95,7 @@ export default function RoutineItemScreen() {
               {suggestions.map((entry) => (
                 <Pressable
                   key={entry.name}
-                  onPress={() => applyCatalogEntry(entry.name)}
+                  onPress={() => handleNameChange(entry.name)}
                   style={[styles.chip, { borderColor: theme.border }]}>
                   <ThemedText type="small" themeColor="textSecondary">
                     {entry.name}
@@ -149,12 +162,24 @@ export default function RoutineItemScreen() {
 
         <ThemedView style={styles.section}>
           <ThemedText type="smallBold">Which days?</ThemedText>
-          <WeekdayPicker value={daysOfWeek} onChange={setDaysOfWeek} />
+          <WeekdayPicker
+            value={daysOfWeek}
+            onChange={(days) => {
+              scheduleTouched.current = true;
+              setDaysOfWeek(days);
+            }}
+          />
         </ThemedView>
 
         <ThemedView style={styles.section}>
           <ThemedText type="smallBold">What time?</ThemedText>
-          <TimesEditor value={times} onChange={setTimes} />
+          <TimesEditor
+            value={times}
+            onChange={(next) => {
+              scheduleTouched.current = true;
+              setTimes(next);
+            }}
+          />
         </ThemedView>
 
         <ThemedView type="backgroundElement" style={styles.preview}>
