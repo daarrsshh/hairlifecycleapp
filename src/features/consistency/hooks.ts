@@ -5,10 +5,12 @@ import { doseLogs } from '@/db/schema';
 import { loadDosingContext } from '@/features/dose-log/api';
 import {
   computeEffectiveState,
+  findRoutineForDate,
   getScheduledDoses,
   resolveDayProgress,
   type DayStatus,
   type DoseLogRecord,
+  type RoutineItemType,
   type ScheduledDose,
 } from '@/features/dose-log/doseState';
 import {
@@ -64,6 +66,7 @@ export async function loadConsistencyContext() {
     earliestStart,
     currentDate,
     items,
+    routines,
   };
 }
 
@@ -101,6 +104,7 @@ export function useWeeklyProgress() {
 export interface ItemConsistencyRow {
   itemId: string;
   name: string;
+  type: RoutineItemType;
   taken: number;
   total: number;
 }
@@ -132,9 +136,16 @@ export function useConsistencyStats() {
       // Same calendar week as Home's strip — both surfaces say "this week", so they must mean
       // the same thing rather than one being a rolling 7 days.
       const weekStart = startOfWeek(ctx.currentDate);
-      const itemsThisWeek = ctx.items.map((item) => ({
+      // Only the routine in effect today. `ctx.items` holds items from *every* routine ever
+      // created, so without this every past routine's items linger here permanently stuck on
+      // "nothing due", and a duplicate appears each time the routine is changed.
+      const activeRoutine = findRoutineForDate(ctx.routines, ctx.currentDate);
+      const activeItems = ctx.items.filter((i) => i.routineId === activeRoutine?.id);
+
+      const itemsThisWeek = activeItems.map((item) => ({
         itemId: item.id,
         name: item.name,
+        type: item.type,
         ...computeItemConsistency(
           weekStart,
           ctx.currentDate,
