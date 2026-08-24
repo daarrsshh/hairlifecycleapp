@@ -10,6 +10,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useWeeklyProgress } from '@/features/consistency/hooks';
 import { WeekStrip } from '@/features/consistency/components/week-strip';
+import { DosePips } from '@/features/dose-log/components/dose-pips';
 import type { DoseState } from '@/features/dose-log/doseState';
 import { useLogDose, useTodayDoses, type TodayDose } from '@/features/dose-log/hooks';
 import { getAppSettings } from '@/features/onboarding/settings-api';
@@ -142,6 +143,10 @@ export default function HomeScreen() {
                     {dose.dosage ? ` · ${dose.dosage}` : ''}
                   </ThemedText>
                 </ThemedView>
+
+                {dose.doseCount > 1 ? (
+                  <DosePips states={dose.itemDoseStates} currentIndex={dose.doseIndex} />
+                ) : null}
 
                 <StateActions
                   state={dose.state}

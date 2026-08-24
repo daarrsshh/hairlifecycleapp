@@ -18,6 +18,12 @@ export interface TodayDose {
   dosage: string | null;
   type: RoutineItemType;
   state: DoseState;
+  /** This dose's position among today's doses for the same item, 0-based. */
+  doseIndex: number;
+  /** How many times this item is due today — >1 means it appears in several time blocks. */
+  doseCount: number;
+  /** Every one of today's doses for this item, in time order, so a card can show overall progress. */
+  itemDoseStates: DoseState[];
 }
 
 /** Doses due at the same time, shown as one block ("Morning · 8:00 AM"). */
@@ -40,16 +46,27 @@ export function useTodayDoses() {
       ]);
 
       const byId = new Map(items.map((i) => [i.id, i]));
-      const blocks = new Map<string, TodayTimeBlock>();
 
+      const stateFor = (itemId: string, time: string) =>
+        computeEffectiveState(
+          logs.find((l: DoseLogRecord) => l.routineItemId === itemId && l.time === time),
+          date,
+          date
+        );
+
+      // `scheduled` is time-ordered, so an item's doses are collected in the order they're due —
+      // which is what makes "dose 2 of 2" meaningful.
+      const timesByItem = new Map<string, string[]>();
+      for (const dose of scheduled) {
+        timesByItem.set(dose.itemId, [...(timesByItem.get(dose.itemId) ?? []), dose.time]);
+      }
+
+      const blocks = new Map<string, TodayTimeBlock>();
       for (const dose of scheduled) {
         const item = byId.get(dose.itemId);
         if (!item) continue;
 
-        const log = logs.find(
-          (l: DoseLogRecord) => l.routineItemId === dose.itemId && l.time === dose.time
-        );
-
+        const itemTimes = timesByItem.get(dose.itemId) ?? [dose.time];
         const block = blocks.get(dose.time) ?? {
           time: dose.time,
           label: timeOfDayLabel(dose.time),
@@ -61,7 +78,10 @@ export function useTodayDoses() {
           name: item.name,
           dosage: item.dosage,
           type: item.type,
-          state: computeEffectiveState(log, date, date),
+          state: stateFor(dose.itemId, dose.time),
+          doseIndex: itemTimes.indexOf(dose.time),
+          doseCount: itemTimes.length,
+          itemDoseStates: itemTimes.map((t) => stateFor(dose.itemId, t)),
         });
         blocks.set(dose.time, block);
       }
