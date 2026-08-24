@@ -31,15 +31,18 @@ export function AngleCaptureFlow({
   onSave,
   saving,
   footer,
+  initialPhotos,
 }: {
   headerText: string;
   saveLabel: string;
   onSave: (captured: CapturedPhotos) => void | Promise<void>;
   saving: boolean;
   footer?: (captured: CapturedPhotos) => ReactNode;
+  /** Angles already captured for this set, so re-opening shows the existing shots. */
+  initialPhotos?: CapturedPhotos;
 }) {
   const theme = useTheme();
-  const [captured, setCaptured] = useState<CapturedPhotos>({});
+  const [captured, setCaptured] = useState<CapturedPhotos>(initialPhotos ?? {});
   const [activeAngle, setActiveAngle] = useState<PhotoAngle | null>(null);
 
   async function pickFromLibrary(angle: PhotoAngle) {

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { randomUUID } from 'expo-crypto';
 import { Directory, File, Paths } from 'expo-file-system';
 
@@ -22,27 +22,87 @@ function getPhotosDirectory() {
   return dir;
 }
 
-/** Copies a picked/captured image into app-managed storage and records it, so it survives the OS clearing the picker's temp cache. */
+/** Best-effort file removal — a missing file shouldn't block replacing a photo. */
+function deleteFileQuietly(uri: string) {
+  try {
+    const file = new File(uri);
+    if (file.exists) file.delete();
+  } catch {
+    // Orphaned file at worst; not worth failing the save over.
+  }
+}
+
+/**
+ * Copies a picked/captured image into app-managed storage and records it, so it survives the OS
+ * clearing the picker's temp cache.
+ *
+ * **One photo per (date, angle).** A set is the four angles from one day, so re-capturing an
+ * angle *replaces* that day's photo rather than appending a second one — otherwise a set grows
+ * past four and the compare screen gets duplicate entries for the same day and angle. The old
+ * file is deleted so replacements don't leak storage.
+ */
 export async function savePhoto(
   sourceUri: string,
   angle: PhotoAngle,
   routineId: string | null,
   date: DateString = today()
 ) {
-  const id = randomUUID();
   const source = new File(sourceUri);
+  const id = randomUUID();
   const destination = new File(getPhotosDirectory(), `${id}${source.extension || '.jpg'}`);
   await source.copy(destination);
 
-  await db.insert(photos).values({
-    id,
-    routineId,
-    date,
-    angle,
-    filePath: destination.uri,
-  });
+  const existing = await db
+    .select()
+    .from(photos)
+    .where(and(eq(photos.date, date), eq(photos.angle, angle)));
+
+  if (existing[0]) {
+    deleteFileQuietly(existing[0].filePath);
+    await db
+      .update(photos)
+      .set({ filePath: destination.uri, routineId, createdAt: new Date().toISOString() })
+      .where(eq(photos.id, existing[0].id));
+  } else {
+    await db.insert(photos).values({ id, routineId, date, angle, filePath: destination.uri });
+  }
 
   return destination.uri;
+}
+
+/** Today's set so far — lets the capture screen show what's already there instead of starting blank. */
+export async function getPhotosForDate(date: DateString = today()) {
+  return db.select().from(photos).where(eq(photos.date, date));
+}
+
+/**
+ * Drops duplicate rows for the same (date, angle), keeping the newest and deleting the older
+ * files. Guards the one-photo-per-angle invariant, which nothing enforces at the schema level
+ * — and cleans up rows created before `savePhoto` replaced instead of appending.
+ */
+export async function dedupePhotos() {
+  const all = await db.select().from(photos);
+  const newestByKey = new Map<string, (typeof all)[number]>();
+  const stale: (typeof all)[number][] = [];
+
+  for (const photo of all) {
+    const key = `${photo.date}|${photo.angle}`;
+    const kept = newestByKey.get(key);
+    if (!kept) {
+      newestByKey.set(key, photo);
+    } else if (photo.createdAt > kept.createdAt) {
+      newestByKey.set(key, photo);
+      stale.push(kept);
+    } else {
+      stale.push(photo);
+    }
+  }
+
+  for (const photo of stale) {
+    deleteFileQuietly(photo.filePath);
+    await db.delete(photos).where(eq(photos.id, photo.id));
+  }
+  return stale.length;
 }
 
 /** Convenience wrapper for capture flows outside onboarding, where there's no routine object already in hand. */
