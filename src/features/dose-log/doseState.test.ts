@@ -187,3 +187,52 @@ describe('resolveDayStatus', () => {
     expect(resolveDayStatus('2026-08-22', [], [], '2026-08-22')).toBe('no-treatment');
   });
 });
+
+describe('switching routines', () => {
+  // startRoutine ends the old routine by setting its endDate to the new one's startDate, so
+  // both reference the switch day. The interval has to be half-open — [start, end) — or the
+  // outgoing routine still owns that day and the new one appears to do nothing.
+  const oldRoutine = { id: 'old', startDate: '2026-08-01', endDate: '2026-08-24' };
+  const newRoutine = { id: 'new', startDate: '2026-08-24', endDate: null };
+  const routines = [oldRoutine, newRoutine]; // getAllRoutines orders by startDate
+
+  const minoxidil = item({
+    id: 'min',
+    routineId: 'old',
+    name: 'Minoxidil',
+    daysOfWeek: [0, 2, 3, 4, 5, 6], // every day except Monday
+  });
+  const finasteride = item({
+    id: 'fin',
+    routineId: 'new',
+    name: 'Finasteride',
+    type: 'oral',
+    daysOfWeek: EVERY_DAY,
+    times: ['08:00', '20:00'],
+  });
+  const items = [minoxidil, finasteride];
+
+  it('hands over on the switch day itself', () => {
+    // 2026-08-24 is a Monday: the old routine skips Mondays, the new one does not.
+    const doses = getScheduledDoses('2026-08-24', routines, [], items);
+    expect(doses.map((d) => d.itemId)).toEqual(['fin', 'fin']);
+  });
+
+  it('leaves days before the switch on the old routine', () => {
+    // 2026-08-23 is a Sunday, which the old routine does cover.
+    const doses = getScheduledDoses('2026-08-23', routines, [], items);
+    expect(doses.map((d) => d.itemId)).toEqual(['min']);
+  });
+
+  it('schedules nothing on a day the old routine excluded, before the switch', () => {
+    // 2026-08-17, a Monday under the old routine.
+    expect(getScheduledDoses('2026-08-17', routines, [], items)).toEqual([]);
+  });
+
+  it('keeps following the new routine after the switch', () => {
+    expect(getScheduledDoses('2026-08-30', routines, [], items).map((d) => d.itemId)).toEqual([
+      'fin',
+      'fin',
+    ]);
+  });
+});

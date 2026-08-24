@@ -88,10 +88,19 @@ function isPausedOnDate(routineId: string, date: DateString, pauseWindows: Pause
   );
 }
 
-/** Which routine (if any) covered a given date — a past date can fall under a since-ended routine. */
+/**
+ * Which routine (if any) covered a given date — a past date can fall under a since-ended routine.
+ *
+ * The interval is **half-open: `[startDate, endDate)`.** `startRoutine` ends the outgoing
+ * routine by setting its `endDate` to the incoming one's `startDate`, so both name the switch
+ * day; treating `endDate` as inclusive made both match it and the outgoing one won (it sorts
+ * first by `startDate`). The visible effect was that a newly started routine did nothing at all
+ * on the day it began. An exclusive end also reads correctly on its own terms: a routine that
+ * "ended on the 24th" is one the 24th no longer belongs to.
+ */
 export function findRoutineForDate<T extends RoutineRange>(routines: T[], date: DateString): T | undefined {
   return routines.find(
-    (r) => !isBefore(date, r.startDate) && (r.endDate === null || !isBefore(r.endDate, date))
+    (r) => !isBefore(date, r.startDate) && (r.endDate === null || isBefore(date, r.endDate))
   );
 }
 
