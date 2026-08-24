@@ -27,6 +27,7 @@ CREATE TABLE `photos` (
 	FOREIGN KEY (`routine_id`) REFERENCES `routines`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `photos_date_angle` ON `photos` (`date`,`angle`);--> statement-breakpoint
 CREATE TABLE `profiles` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -63,3 +64,5 @@ CREATE TABLE `routines` (
 	`status` text DEFAULT 'active' NOT NULL,
 	`created_at` text DEFAULT (current_timestamp) NOT NULL
 );
+--> statement-breakpoint
+CREATE UNIQUE INDEX `routines_single_active` ON `routines` (`end_date`) WHERE "routines"."end_date" is null;

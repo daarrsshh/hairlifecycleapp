@@ -15,17 +15,28 @@ export const profiles = sqliteTable('profiles', {
  * One personal routine = a bundle of items the user follows together. Starting a new routine
  * ends the previous one rather than editing it, so history stays intact (PRD §5.5).
  */
-export const routines = sqliteTable('routines', {
-  id: text('id').primaryKey(),
-  startDate: text('start_date').notNull(), // YYYY-MM-DD
-  endDate: text('end_date'),
-  status: text('status', { enum: ['active', 'paused', 'ended'] })
-    .notNull()
-    .default('active'),
-  createdAt: text('created_at')
-    .notNull()
-    .default(sql`(current_timestamp)`),
-});
+export const routines = sqliteTable(
+  'routines',
+  {
+    id: text('id').primaryKey(),
+    startDate: text('start_date').notNull(), // YYYY-MM-DD
+    endDate: text('end_date'),
+    status: text('status', { enum: ['active', 'paused', 'ended'] })
+      .notNull()
+      .default('active'),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    // `getActiveRoutine` assumes exactly one open routine; a partial unique index makes that
+    // true rather than merely intended. Two open routines would silently give the whole app a
+    // different answer depending on row order.
+    uniqueIndex('routines_single_active')
+      .on(table.endDate)
+      .where(sql`${table.endDate} is null`),
+  ]
+);
 
 // A routine can be paused and resumed multiple times; each cycle is its own row so the
 // Timeline can render every pause as a distinct segment (PRD §5.6).
@@ -82,18 +93,25 @@ export const doseLogs = sqliteTable(
   (table) => [uniqueIndex('dose_logs_item_date_time').on(table.routineItemId, table.date, table.time)]
 );
 
-export const photos = sqliteTable('photos', {
-  id: text('id').primaryKey(),
-  routineId: text('routine_id').references(() => routines.id),
-  date: text('date').notNull(),
-  angle: text('angle', {
-    enum: ['crown', 'hairline', 'left_temple', 'right_temple'],
-  }).notNull(),
-  filePath: text('file_path').notNull(),
-  createdAt: text('created_at')
-    .notNull()
-    .default(sql`(current_timestamp)`),
-});
+export const photos = sqliteTable(
+  'photos',
+  {
+    id: text('id').primaryKey(),
+    routineId: text('routine_id').references(() => routines.id),
+    date: text('date').notNull(),
+    angle: text('angle', {
+      enum: ['crown', 'hairline', 'left_temple', 'right_temple'],
+    }).notNull(),
+    filePath: text('file_path').notNull(),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  // A set is one day's four angles, so a second photo for the same angle is a replacement,
+  // never an addition. Enforced here so no future code path can bypass it — `savePhoto`
+  // replacing is the intent, this is the guarantee.
+  (table) => [uniqueIndex('photos_date_angle').on(table.date, table.angle)]
+);
 
 export const appSettings = sqliteTable('app_settings', {
   id: text('id').primaryKey().default('singleton'),

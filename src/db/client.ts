@@ -10,6 +10,6 @@ import * as schema from '@/db/schema';
  * "clear app data" step. **Once this ships, stop doing this**: add real migrations and leave
  * the filename alone, or you'll silently wipe real users' history.
  */
-export const sqlite = openDatabaseSync('hairlifecycle-v2.db');
+export const sqlite = openDatabaseSync('hairlifecycle-v3.db');
 
 export const db = drizzle(sqlite, { schema });

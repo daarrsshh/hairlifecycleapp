@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "3b11fdc7-c5ff-4a6b-b6ee-a7e045f1f57b",
+  "id": "6a3e8bd5-1827-4ecc-8a89-cc00c679bf00",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "app_settings": {
@@ -177,7 +177,16 @@
           "default": "(current_timestamp)"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "photos_date_angle": {
+          "name": "photos_date_angle",
+          "columns": [
+            "date",
+            "angle"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "photos_routine_id_routines_id_fk": {
           "name": "photos_routine_id_routines_id_fk",
@@ -424,7 +433,16 @@
           "default": "(current_timestamp)"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "routines_single_active": {
+          "name": "routines_single_active",
+          "columns": [
+            "end_date"
+          ],
+          "isUnique": true,
+          "where": "\"routines\".\"end_date\" is null"
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

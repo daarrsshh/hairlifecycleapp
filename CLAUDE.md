@@ -30,7 +30,21 @@ npm run reset-project     # moves current app/ to app-example/ and creates a bla
 
 `expo-env.d.ts`, `.expo/`, and the typed-routes declarations (`.expo/types/router.d.ts`) are generated on first `expo start` and are gitignored — **adding a new route file requires regenerating them before `tsc` will accept the route string** in `router.push`/`href`/`<Link>`. Run `npx expo start` once (Ctrl-C after "Waiting on...") to regenerate. Check this first if `tsc` rejects a route you just added; it trips people up constantly here.
 
-**Pre-release schema changes: regenerate, don't migrate.** Nothing has shipped, so when `src/db/schema.ts` changes, delete `src/db/migrations/` and run `npm run db:generate` fresh rather than stacking migrations. A regenerated `0000` collides with an older database already on a test device, so `src/db/client.ts` also carries a **versioned filename** (`hairlifecycle-v2.db`) — bump it alongside a regeneration for a clean slate with no manual "clear app data" step. **Once this ships, stop both practices**: add real migrations and leave the filename alone, or you'll silently wipe real users' history.
+### ⚠️ Schema changes: the rule changes completely at launch
+
+**Right now (pre-release, no real users):** when `src/db/schema.ts` changes, delete `src/db/migrations/`, run `npm run db:generate`, and **bump the versioned filename** in `src/db/client.ts` (`hairlifecycle-v3.db` → `-v4`). A regenerated `0000` collides with an older database already on a test device; bumping the name sidesteps it with no manual "clear app data" step. The cost is that **every tester loses all their data** — that's an accepted trade only because the only data is disposable test data.
+
+**The moment a real user installs this, both of those become destructive and must stop.** From then on:
+- **Never delete or edit a migration that has shipped.** Add a new one (`0001`, `0002`, …). Drizzle tracks which have been applied; rewriting history makes an installed app either re-run DDL against existing tables or skip changes entirely.
+- **Never change the database filename again.** It is not a version marker — it's the address of the user's data. Pointing at a new name silently abandons their entire history: every logged dose, every progress photo, months of tracking, with no error and no way back from inside the app.
+- Adding a constraint to a table that already has violating rows will fail the migration on the user's device. Migrate the data first (dedupe/backfill in the same migration), then add the constraint.
+
+Because a reset is currently free, it's the right moment to add any constraint that's been deferred — after launch, each one costs a data migration.
+
+**Invariants currently enforced at the schema level** (rather than only in code, so no future code path can bypass them):
+- `dose_logs_item_date_time` — one log per item per time per day.
+- `photos_date_angle` — one photo per angle per day; a set is exactly one day's four angles, so a re-shoot is a replacement (`savePhoto` handles that; a blind insert now throws).
+- `routines_single_active` — a *partial* unique index on `end_date WHERE end_date IS NULL`, so at most one routine can be open. `getActiveRoutine` assumes this; the index makes it true rather than merely intended.
 
 ## Architecture
 

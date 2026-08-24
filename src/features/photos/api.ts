@@ -37,9 +37,11 @@ function deleteFileQuietly(uri: string) {
  * clearing the picker's temp cache.
  *
  * **One photo per (date, angle).** A set is the four angles from one day, so re-capturing an
- * angle *replaces* that day's photo rather than appending a second one — otherwise a set grows
- * past four and the compare screen gets duplicate entries for the same day and angle. The old
- * file is deleted so replacements don't leak storage.
+ * angle *replaces* that day's photo rather than appending a second one. The old file is deleted
+ * so replacements don't leak storage.
+ *
+ * This replace step is load-bearing, not a nicety: `photos_date_angle` is a unique index, so
+ * blindly inserting a second photo for an angle would now throw rather than quietly duplicate.
  */
 export async function savePhoto(
   sourceUri: string,
@@ -73,36 +75,6 @@ export async function savePhoto(
 /** Today's set so far — lets the capture screen show what's already there instead of starting blank. */
 export async function getPhotosForDate(date: DateString = today()) {
   return db.select().from(photos).where(eq(photos.date, date));
-}
-
-/**
- * Drops duplicate rows for the same (date, angle), keeping the newest and deleting the older
- * files. Guards the one-photo-per-angle invariant, which nothing enforces at the schema level
- * — and cleans up rows created before `savePhoto` replaced instead of appending.
- */
-export async function dedupePhotos() {
-  const all = await db.select().from(photos);
-  const newestByKey = new Map<string, (typeof all)[number]>();
-  const stale: (typeof all)[number][] = [];
-
-  for (const photo of all) {
-    const key = `${photo.date}|${photo.angle}`;
-    const kept = newestByKey.get(key);
-    if (!kept) {
-      newestByKey.set(key, photo);
-    } else if (photo.createdAt > kept.createdAt) {
-      newestByKey.set(key, photo);
-      stale.push(kept);
-    } else {
-      stale.push(photo);
-    }
-  }
-
-  for (const photo of stale) {
-    deleteFileQuietly(photo.filePath);
-    await db.delete(photos).where(eq(photos.id, photo.id));
-  }
-  return stale.length;
 }
 
 /** Convenience wrapper for capture flows outside onboarding, where there's no routine object already in hand. */

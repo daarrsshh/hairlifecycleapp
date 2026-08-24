@@ -5,7 +5,6 @@ import { useEffect } from 'react';
 
 import { reconcileMissedDoses } from '@/features/dose-log/api';
 import { getProfile } from '@/features/onboarding/api';
-import { dedupePhotos } from '@/features/photos/api';
 import { getAllRoutines } from '@/features/routine/api';
 
 export default function Index() {
@@ -21,9 +20,6 @@ export default function Index() {
           if (routines[0]) {
             await reconcileMissedDoses(routines[0].startDate);
           }
-          // Enforces one photo per (date, angle) for anything that predates savePhoto's
-          // replace behaviour; a no-op once the data is clean.
-          await dedupePhotos();
         }
       } catch (e) {
         // Startup cleanup failing shouldn't leave the user stuck on the splash screen forever.
