@@ -72,6 +72,19 @@ export async function savePhoto(
   return destination.uri;
 }
 
+/**
+ * Removes every stored photo file. Photos live on disk, not in the database, so wiping tables
+ * alone would leave them orphaned — this is the other half of a real reset.
+ */
+export function deleteAllPhotoFiles() {
+  try {
+    const dir = getPhotosDirectory();
+    if (dir.exists) dir.delete();
+  } catch {
+    // Nothing references them any more either way.
+  }
+}
+
 /** Today's set so far — lets the capture screen show what's already there instead of starting blank. */
 export async function getPhotosForDate(date: DateString = today()) {
   return db.select().from(photos).where(eq(photos.date, date));
