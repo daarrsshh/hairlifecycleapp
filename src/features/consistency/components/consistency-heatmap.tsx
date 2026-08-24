@@ -3,10 +3,16 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import type { DayStatus } from '@/features/dose-log/doseState';
+import { buildMonthGrid, describeMonth, weekdayInitials } from '@/features/consistency/month-grid';
 import { useTheme } from '@/hooks/use-theme';
 
-const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const WEEKDAY_INITIALS = weekdayInitials(); // Monday-first, matching Home's week strip
 
+/**
+ * A month of day-statuses. Laid out as explicit rows of 7 `flex: 1` cells rather than a
+ * wrapping row of percentage widths — the latter could round a column onto the next line,
+ * emptying a column and shifting every date after it.
+ */
 export function ConsistencyHeatmap({
   year,
   month,
@@ -19,41 +25,21 @@ export function ConsistencyHeatmap({
   onSelectDate?: (date: string) => void;
 }) {
   const theme = useTheme();
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const firstWeekday = new Date(year, month - 1, 1).getDay();
+  const weeks = buildMonthGrid(year, month);
 
   const cellColor = (status: DayStatus | undefined) => {
     if (status === 'complete') return theme.taken;
     if (status === 'incomplete') return theme.missed;
     if (status === 'in-progress') return theme.primary;
-    return theme.backgroundElement;
+    return theme.backgroundSelected; // nothing due, or not yet reached
   };
 
-  const cells: React.ReactNode[] = [];
-  for (let i = 0; i < firstWeekday; i++) {
-    cells.push(<View key={`empty-${i}`} style={styles.cell} />);
-  }
-  for (let day = 1; day <= daysInMonth; day++) {
-    const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const status = dayStatuses[date];
-    const disabled = status === undefined || status === 'no-treatment';
-    cells.push(
-      <Pressable
-        key={date}
-        disabled={disabled}
-        onPress={() => onSelectDate?.(date)}
-        style={[styles.cell, styles.dayCell, { backgroundColor: cellColor(dayStatuses[date]) }]}>
-        <ThemedText type="small" style={styles.dayLabel}>
-          {day}
-        </ThemedText>
-      </Pressable>
-    );
-  }
-
   return (
-    <View>
-      <View style={styles.weekdayRow}>
-        {WEEKDAY_LABELS.map((label, i) => (
+    <View style={styles.container}>
+      <ThemedText type="smallBold">{describeMonth(year, month)}</ThemedText>
+
+      <View style={styles.row}>
+        {WEEKDAY_INITIALS.map((label, i) => (
           <View key={i} style={styles.cell}>
             <ThemedText type="small" themeColor="textSecondary" style={styles.dayLabel}>
               {label}
@@ -61,23 +47,43 @@ export function ConsistencyHeatmap({
           </View>
         ))}
       </View>
-      <View style={styles.grid}>{cells}</View>
+
+      {weeks.map((week, weekIndex) => (
+        <View key={weekIndex} style={styles.row}>
+          {week.map((date, dayIndex) => {
+            if (!date) return <View key={`blank-${dayIndex}`} style={styles.cell} />;
+
+            const status = dayStatuses[date];
+            const dayNumber = Number(date.slice(-2));
+            return (
+              <View key={date} style={styles.cell}>
+                <Pressable
+                  disabled={status === undefined || status === 'no-treatment'}
+                  onPress={() => onSelectDate?.(date)}
+                  style={[styles.dayCell, { backgroundColor: cellColor(status) }]}>
+                  <ThemedText type="small" style={styles.dayLabel}>
+                    {dayNumber}
+                  </ThemedText>
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+      ))}
     </View>
   );
 }
 
-const CELL_SIZE = 36;
-
 const styles = StyleSheet.create({
-  weekdayRow: { flexDirection: 'row' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  cell: {
-    width: `${100 / 7}%`,
-    aspectRatio: 1,
-    maxHeight: CELL_SIZE,
+  container: { gap: Spacing.one },
+  row: { flexDirection: 'row' },
+  // flex:1 across exactly 7 siblings — no percentage rounding, so columns always line up.
+  cell: { flex: 1, aspectRatio: 1, maxHeight: 40, padding: 2 },
+  dayCell: {
+    flex: 1,
+    borderRadius: Spacing.one,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dayCell: { borderRadius: Spacing.one, padding: 2 },
   dayLabel: { fontSize: 11 },
 });

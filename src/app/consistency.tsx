@@ -55,9 +55,7 @@ export default function ConsistencyScreen() {
         ) : null}
 
         <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText themeColor="textSecondary" type="small" style={styles.heatmapLabel}>
-            This month at a glance
-          </ThemedText>
+          {/* The heatmap renders its own "August 2026" heading, so no label is needed here. */}
           <ConsistencyHeatmap
             year={data.year}
             month={data.month}
@@ -91,6 +89,5 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: Spacing.three },
   statTile: { flex: 1, padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.one },
   card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.one },
-  heatmapLabel: { marginBottom: Spacing.one },
   itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 });
