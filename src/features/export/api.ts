@@ -1,4 +1,4 @@
-import { File } from 'expo-file-system';
+import { Directory, File, Paths } from 'expo-file-system';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
@@ -8,6 +8,35 @@ import { buildExportHtml, type ExportPhotoGroup } from '@/features/export/build-
 import { resolveExportRange, type ExportRangeOption } from '@/features/export/resolve-range';
 import { getAllPhotos } from '@/features/photos/api';
 import type { DateString } from '@/lib/date';
+
+/**
+ * Where the finished PDF is staged before sharing.
+ *
+ * `Print.printToFileAsync` writes into its own temp location, which Android's FileProvider is
+ * not configured to expose — sharing straight from it is rejected with "Not allowed to read
+ * file under given URL". Copying into the app's own document tree (the same one progress photos
+ * live in, which is covered by the provider) is what makes the share succeed.
+ *
+ * Built lazily inside the function, never at module scope: expo-file-system has no native
+ * module during web's SSR pass, and a module-scope `new Directory(...)` crashes the route tree
+ * at import time.
+ */
+function getExportsDirectory(): Directory {
+  const dir = new Directory(Paths.document, 'exports');
+  if (!dir.exists) dir.create({ idempotent: true });
+  return dir;
+}
+
+/** Exports are disposable, and one can be several MB with photos — keep only the newest. */
+function clearPreviousExports(dir: Directory) {
+  try {
+    for (const entry of dir.list()) {
+      if (entry instanceof File) entry.delete();
+    }
+  } catch {
+    // Tidying is best-effort; a failure here must not block the export itself.
+  }
+}
 
 const MIME_BY_EXTENSION: Record<string, string> = {
   '.png': 'image/png',
@@ -82,14 +111,21 @@ export async function generateAndShareExport(options: {
   }
 
   const html = buildExportHtml({ rangeLabel, completed, total, currentStreak, bestStreakInRange }, photoGroups);
-  const { uri } = await Print.printToFileAsync({ html });
+  const printed = await Print.printToFileAsync({ html });
+
+  // Restage into our own document tree before sharing — see getExportsDirectory. The rename is
+  // a bonus: expo-print's output has a random name, and this is a file people hand to a doctor.
+  const exportsDir = getExportsDirectory();
+  clearPreviousExports(exportsDir);
+  const target = new File(exportsDir, `HairLifecycle-${toDate}.pdf`);
+  await new File(printed.uri).copy(target);
 
   // Sharing being unavailable is reported, not swallowed: the PDF exists either way, and a
   // caller that silently returns here is indistinguishable from the export doing nothing.
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {
-    await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf' });
+    await Sharing.shareAsync(target.uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf' });
   }
 
-  return { uri, shared: canShare };
+  return { uri: target.uri, shared: canShare };
 }
