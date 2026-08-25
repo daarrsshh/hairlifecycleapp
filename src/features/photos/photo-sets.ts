@@ -60,9 +60,24 @@ export function groupPhotosIntoSets(
 
 /** "Day 0" for the baseline set, "Day 14" thereafter — falls back to the date when there's no routine history. */
 export function describeSetTiming(set: PhotoSet): string {
-  if (set.dayNumber === null) return set.date;
-  if (set.dayNumber === 0) return 'Day 0 · baseline';
-  return `Day ${set.dayNumber}`;
+  return describeDayNumber(set.dayNumber, set.date);
+}
+
+/**
+ * The same "Day N" label for a single photo rather than a whole set, so Compare's pickers read
+ * the way the Photos tab does instead of showing raw `2026-08-14` strings.
+ */
+export function describePhotoTiming(date: DateString, startDate: DateString | null): string {
+  return describeDayNumber(startDate ? daysBetween(startDate, date) : null, date);
+}
+
+/** Shared by both, so a set card and a photo chip can never disagree about what day it is. */
+function describeDayNumber(dayNumber: number | null, fallbackDate: DateString): string {
+  if (dayNumber === null) return fallbackDate;
+  // A photo taken before the routine began still has a real date; a negative day would be noise.
+  if (dayNumber < 0) return fallbackDate;
+  if (dayNumber === 0) return 'Day 0 · baseline';
+  return `Day ${dayNumber}`;
 }
 
 export function describeSetCoverage(set: PhotoSet): string {

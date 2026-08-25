@@ -1,9 +1,4 @@
-import {
-  describeSetCoverage,
-  describeSetTiming,
-  groupPhotosIntoSets,
-  type PhotoRecord,
-} from './photo-sets';
+import { describePhotoTiming, describeSetCoverage, describeSetTiming, groupPhotosIntoSets, type PhotoRecord } from './photo-sets';
 
 function photo(date: string, angle: PhotoRecord['angle'], id = `${date}-${angle}`): PhotoRecord {
   return { id, date, angle, filePath: `/photos/${id}.jpg` };
@@ -98,5 +93,27 @@ describe('describeSetTiming', () => {
   it('falls back to the raw date with no routine history', () => {
     const [set] = groupPhotosIntoSets([photo('2026-08-16', 'crown')], null);
     expect(describeSetTiming(set)).toBe('2026-08-16');
+  });
+});
+
+describe('describePhotoTiming', () => {
+  it('numbers days from the routine start, with the baseline reading Day 0', () => {
+    expect(describePhotoTiming('2026-06-01', '2026-06-01')).toBe('Day 0 · baseline');
+    expect(describePhotoTiming('2026-06-15', '2026-06-01')).toBe('Day 14');
+    expect(describePhotoTiming('2026-09-01', '2026-06-01')).toBe('Day 92');
+  });
+
+  it('falls back to the raw date when there is no routine history', () => {
+    expect(describePhotoTiming('2026-06-15', null)).toBe('2026-06-15');
+  });
+
+  it('falls back to the date for a photo predating the routine, rather than a negative day', () => {
+    expect(describePhotoTiming('2026-05-20', '2026-06-01')).toBe('2026-05-20');
+  });
+
+  it('agrees with describeSetTiming for the same day', () => {
+    // Both go through one helper; this pins that they can't drift apart.
+    const set = { date: '2026-06-15', dayNumber: 14, angles: [], coverAngle: null } as never;
+    expect(describeSetTiming(set)).toBe(describePhotoTiming('2026-06-15', '2026-06-01'));
   });
 });
