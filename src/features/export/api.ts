@@ -111,14 +111,22 @@ export async function generateAndShareExport(options: {
   }
 
   const html = buildExportHtml({ rangeLabel, completed, total, currentStreak, bestStreakInRange }, photoGroups);
-  const printed = await Print.printToFileAsync({ html });
 
-  // Restage into our own document tree before sharing — see getExportsDirectory. The rename is
-  // a bonus: expo-print's output has a random name, and this is a file people hand to a doctor.
+  // Ask for the bytes, not just a path. expo-print writes its own temp file outside the app
+  // sandbox, and expo-file-system's scoped API refuses to read it ("Missing 'READ' permission")
+  // exactly as Sharing refuses to expose it. Taking the PDF as base64 and writing it ourselves
+  // means that file is never touched at all.
+  const printed = await Print.printToFileAsync({ html, base64: true });
+  if (!printed.base64) {
+    throw new Error('The PDF was created but came back empty.');
+  }
+
   const exportsDir = getExportsDirectory();
   clearPreviousExports(exportsDir);
+  // A real filename, not expo-print's random one — this is a document people hand to a doctor.
   const target = new File(exportsDir, `HairLifecycle-${toDate}.pdf`);
-  await new File(printed.uri).copy(target);
+  target.create({ overwrite: true });
+  target.write(printed.base64, { encoding: 'base64' });
 
   // Sharing being unavailable is reported, not swallowed: the PDF exists either way, and a
   // caller that silently returns here is indistinguishable from the export doing nothing.
