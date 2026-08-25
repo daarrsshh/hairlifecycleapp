@@ -33,6 +33,8 @@ export default function LearnScreen() {
         }}
       />
       <ScrollView contentContainerStyle={styles.content}>
+        <ThemedText type="subtitle">Learn</ThemedText>
+
         <TextInput
           value={query}
           onChangeText={setQuery}
@@ -47,7 +49,9 @@ export default function LearnScreen() {
           <>
             {CATEGORIES.map((category) => (
               <ThemedView key={category} style={styles.section}>
-                <ThemedText type="smallBold">{category}</ThemedText>
+                <ThemedText type="caption" themeColor="textSecondary" style={styles.sectionLabel}>
+                  {category}
+                </ThemedText>
                 {ARTICLES.filter((a) => a.category === category).map((article) => (
                   <LinkButton
                     key={article.id}
@@ -60,7 +64,9 @@ export default function LearnScreen() {
             ))}
 
             <ThemedView style={styles.section}>
-              <ThemedText type="smallBold">FAQ</ThemedText>
+              <ThemedText type="caption" themeColor="textSecondary" style={styles.sectionLabel}>
+                FAQ
+              </ThemedText>
               {FAQ.map((entry) => (
                 <ThemedView key={entry.id} type="backgroundElement" style={styles.faqCard}>
                   <ThemedText type="smallBold">{entry.question}</ThemedText>
@@ -122,6 +128,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   section: { gap: Spacing.two },
-  row: { paddingVertical: Spacing.two, borderBottomWidth: StyleSheet.hairlineWidth, gap: Spacing.half },
+  /* A quiet label above the list, not a competing headline — the article titles are what you
+     came to read, so the category that groups them has to sit below them in the hierarchy. */
+  sectionLabel: { textTransform: 'uppercase', letterSpacing: 0.8 },
+  row: { paddingVertical: Spacing.three, borderBottomWidth: StyleSheet.hairlineWidth, gap: Spacing.half },
   faqCard: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.one },
 });
