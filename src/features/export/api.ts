@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
@@ -7,6 +8,35 @@ import { buildExportHtml, type ExportPhotoGroup } from '@/features/export/build-
 import { resolveExportRange, type ExportRangeOption } from '@/features/export/resolve-range';
 import { getAllPhotos } from '@/features/photos/api';
 import type { DateString } from '@/lib/date';
+
+const MIME_BY_EXTENSION: Record<string, string> = {
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.heic': 'image/heic',
+};
+
+/**
+ * Inline a photo as a `data:` URI.
+ *
+ * The HTML previously pointed `<img src>` at the stored `file:///…` path. Whether the WebView
+ * behind `expo-print` will load a local file is platform- and version-dependent, and when it
+ * doesn't the failure is silent — a PDF that generates fine with blank spaces where the photos
+ * should be. Embedding removes the question.
+ *
+ * Returns `null` for a file that can't be read, so one missing photo drops out of the export
+ * instead of failing the whole thing. `File` is constructed inside the function, never at module
+ * scope — expo-file-system has no native module during web's SSR pass.
+ */
+async function toDataUri(filePath: string): Promise<string | null> {
+  try {
+    const file = new File(filePath);
+    const base64 = await file.base64();
+    const mime = MIME_BY_EXTENSION[(file.extension || '.jpg').toLowerCase()] ?? 'image/jpeg';
+    return `data:${mime};base64,${base64}`;
+  } catch {
+    return null;
+  }
+}
 
 export async function generateAndShareExport(options: {
   rangeOption: ExportRangeOption;
@@ -30,8 +60,17 @@ export async function generateAndShareExport(options: {
     const allPhotos = await getAllPhotos();
     const inRange = allPhotos.filter((p) => p.date >= fromDate && p.date <= toDate);
 
+    const embedded = await Promise.all(
+      inRange.map(async (photo) => ({
+        angle: photo.angle,
+        date: photo.date,
+        filePath: await toDataUri(photo.filePath),
+      }))
+    );
+
     const byAngle = new Map<string, { date: string; filePath: string }[]>();
-    for (const photo of inRange) {
+    for (const photo of embedded) {
+      if (!photo.filePath) continue; // unreadable file — leave it out rather than print a gap
       const list = byAngle.get(photo.angle) ?? [];
       list.push({ date: photo.date, filePath: photo.filePath });
       byAngle.set(photo.angle, list);
@@ -45,9 +84,12 @@ export async function generateAndShareExport(options: {
   const html = buildExportHtml({ rangeLabel, completed, total, currentStreak, bestStreakInRange }, photoGroups);
   const { uri } = await Print.printToFileAsync({ html });
 
-  if (await Sharing.isAvailableAsync()) {
+  // Sharing being unavailable is reported, not swallowed: the PDF exists either way, and a
+  // caller that silently returns here is indistinguishable from the export doing nothing.
+  const canShare = await Sharing.isAvailableAsync();
+  if (canShare) {
     await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf' });
   }
 
-  return uri;
+  return { uri, shared: canShare };
 }

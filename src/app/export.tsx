@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Alert, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -28,14 +28,31 @@ export default function ExportScreen() {
   const [pickerTarget, setPickerTarget] = useState<'from' | 'to' | null>(null);
   const [generating, setGenerating] = useState(false);
 
+  /**
+   * Failures here have to be visible. Without the catch this was `try/finally`, so anything
+   * thrown while building the PDF just flipped the button back to "Export PDF" with no error,
+   * no file, and nothing to go on — indistinguishable from the button not working at all.
+   */
   async function generate() {
     setGenerating(true);
     try {
-      await generateAndShareExport({
+      const { shared } = await generateAndShareExport({
         rangeOption: range,
         custom: range === 'custom' ? { from: customFrom, to: customTo } : undefined,
         includePhotos,
       });
+      if (!shared) {
+        Alert.alert(
+          'PDF created',
+          "It's saved to the app's files, but this device has no way to share it from here."
+        );
+      }
+    } catch (e) {
+      console.warn('[export] failed to generate PDF', e);
+      Alert.alert(
+        "Couldn't create the PDF",
+        e instanceof Error ? e.message : 'Something went wrong while building the export.'
+      );
     } finally {
       setGenerating(false);
     }
