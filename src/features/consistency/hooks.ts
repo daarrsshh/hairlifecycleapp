@@ -76,6 +76,8 @@ export interface WeeklyProgress {
   /** Days fully done vs. days that had something scheduled, over the calendar week so far. */
   completed: number;
   total: number;
+  /** First routine's start date — day 0 of treatment, which is what Home's milestones count from. */
+  earliestStart: string | null;
 }
 
 /**
@@ -96,6 +98,7 @@ export function useWeeklyProgress() {
         currentStreak: computeCurrentStreak(currentDate, dayStatus, earliestStart),
         completed,
         total,
+        earliestStart,
       };
     },
   });

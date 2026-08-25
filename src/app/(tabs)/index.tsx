@@ -13,6 +13,7 @@ import { WeekStrip } from '@/features/consistency/components/week-strip';
 import { DoseRow } from '@/features/dose-log/components/dose-row';
 import { useLogDose, useTodayDoses } from '@/features/dose-log/hooks';
 import { getAppSettings } from '@/features/onboarding/settings-api';
+import { getActiveMilestone } from '@/features/learn/milestones';
 import { isPhotoReminderDue } from '@/features/photos/photo-reminder';
 import { ITEM_TYPE_ICON } from '@/features/routine/components/routine-builder';
 import { resumeRoutine } from '@/features/routine/api';
@@ -50,6 +51,7 @@ export default function HomeScreen() {
 
   const { routine, todayItems, takenCount, totalCount } = data;
   const currentDate = today();
+  const milestone = getActiveMilestone(weekly?.earliestStart ?? null, currentDate);
 
   if (!routine) {
     return (
@@ -120,6 +122,21 @@ export default function HomeScreen() {
                 <ThemedText type="linkPrimary">Add photos</ThemedText>
               </ThemedView>
             </LinkButton>
+        ) : null}
+
+        {/* A note for where they are in the journey — most importantly the weeks-2-to-8 shedding
+            phase, which looks like the treatment failing and is when people quit. Sits above the
+            checklist because it's context for the whole screen, not another thing to do. */}
+        {milestone ? (
+          <ThemedView type="backgroundElement" style={styles.milestoneCard}>
+            <ThemedText type="smallBold">{milestone.title}</ThemedText>
+            <ThemedText themeColor="textSecondary" type="small">
+              {milestone.body}
+            </ThemedText>
+            <LinkButton href={`/learn/${milestone.articleId}`}>
+              <ThemedText type="linkPrimary">{milestone.linkLabel}</ThemedText>
+            </LinkButton>
+          </ThemedView>
         ) : null}
 
         {todayItems.length === 0 && routine.status !== 'paused' ? (
@@ -197,6 +214,7 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     borderRadius: Spacing.three,
   },
+  milestoneCard: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
   itemCard: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.one },
   itemHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginBottom: Spacing.one },
   itemName: { flex: 1 },

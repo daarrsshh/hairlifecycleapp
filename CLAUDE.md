@@ -107,6 +107,11 @@ Lessons that apply to anything added here:
 - `AngleCaptureFlow` is the shared 4-angle grid used by both onboarding's baseline photos and standalone "Add photos"; it swaps to a full-screen `GuidedCamera` (with front/back flip) when an angle is tapped, falling back to the library picker when there's no camera permission.
 - **Simplification vs PRD §5.4**: the capture guide is plain dashed shapes, not silhouette artwork, and there's no ghost overlay of the previous shot — the alignment feature this category actually competes on. Both need design assets or real work, not a tweak.
 
+### Learn & milestones
+- `features/learn/milestones.ts` (pure/tested) decides which note Home shows for where the user is in treatment, from **inclusive day windows since the first routine's start**. It exists for one reason: results take 3–6 months, and the only thing that happens early — increased shedding around weeks 2–8 — looks exactly like the treatment failing, which is when people quit. Windows **must not overlap** (enforced by a test) so at most one note is ever due, and there's deliberately **no dismiss** — dismissal would need a settings column, and windows expire on their own.
+- Milestone copy must not outrun the article it links to (`timelines-and-shedding`). A test rejects guilt-inducing and promissory wording; keep it, since the tone rule is a product constraint (PRD §5.5) rather than a style preference.
+- Learn content lives in `features/learn/content/`. Article bodies are currently single ~300–500-char paragraphs; the reader splits on blank lines, so adding paragraphs needs no code change. Categories are a thin layer over 8 articles — folding them is an open simplification.
+
 ### Export
 - `resolve-range.ts` turns a range option into concrete dates; `build-pdf.ts` renders HTML for `expo-print` (image `src`s are local `file://` paths — fine in `expo-print`'s native WebView, would need base64 in a browser); `api.ts` glues them together and hands off via `expo-sharing`, reusing `loadConsistencyContext`.
 
