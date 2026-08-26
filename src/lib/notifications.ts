@@ -40,14 +40,26 @@ export async function requestNotificationPermissions(): Promise<boolean> {
   return requested.granted;
 }
 
-/** Registers the Yes/No/Skip action buttons. Idempotent — safe to call on every launch. */
+/**
+ * Registers the Yes/No/Skip action buttons. Idempotent — safe to call on every launch.
+ *
+ * **`opensAppToForeground: true` is deliberate, and was changed from `false`.** Answering
+ * without opening the app is the nicer idea, but on Android it can't confirm anything: the
+ * notification simply vanishes, and if the process was already killed the answer isn't applied
+ * until the app is next opened. Tapping Yes and seeing nothing happen is indistinguishable from
+ * a button that doesn't work — which is exactly how it got reported.
+ *
+ * Opening the app costs a moment and buys a guarantee: the handler always runs, and the dose is
+ * visibly ticked off on Home. For something done once or twice a day, a reliable answer beats a
+ * silent one.
+ */
 export async function ensureDoseResponseCategory() {
   const Notifications = getNotificationsModule();
   if (!Notifications) return;
   await Notifications.setNotificationCategoryAsync(DOSE_RESPONSE_CATEGORY, [
-    { identifier: 'yes', buttonTitle: 'Yes', options: { opensAppToForeground: false } },
-    { identifier: 'no', buttonTitle: 'No', options: { opensAppToForeground: false } },
-    { identifier: 'skip', buttonTitle: 'Skip', options: { opensAppToForeground: false } },
+    { identifier: 'yes', buttonTitle: 'Yes', options: { opensAppToForeground: true } },
+    { identifier: 'no', buttonTitle: 'No', options: { opensAppToForeground: true } },
+    { identifier: 'skip', buttonTitle: 'Skip', options: { opensAppToForeground: true } },
   ]);
 }
 
