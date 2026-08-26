@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "HairLifecycle",
-    "slug": "HairLifecycle",
+    "slug": "hairlifecycle",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -19,7 +19,10 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
       "output": "static",
@@ -31,7 +34,9 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#FBFAF8",
-          "dark": { "backgroundColor": "#171512" },
+          "dark": {
+            "backgroundColor": "#171512"
+          },
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
@@ -42,13 +47,21 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Used to line up your progress photos consistently, angle by angle."
+          "cameraPermission": "Used to line up your progress photos consistently, angle by angle.",
+          "recordAudioAndroid": false
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": false
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0a48d091-7438-4e1a-a42f-9a6f30393a8c"
+      }
+    },
+    "owner": "darshitag"
   }
 }
