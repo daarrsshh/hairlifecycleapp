@@ -1,7 +1,35 @@
+import { Platform } from 'react-native';
+
 import type { RoutineItemSchedule } from '@/features/dose-log/doseState';
 import { getNotificationsModule } from '@/lib/notifications-safe';
 
 export const DOSE_RESPONSE_CATEGORY = 'dose-response';
+export const DOSE_CHANNEL_ID = 'dose-reminders';
+
+/**
+ * Android needs an explicit channel; there was none, so reminders landed in the system default
+ * at default importance. That matters for the action buttons specifically — a notification that
+ * isn't important enough to expand shows collapsed, and Yes/No/Skip only render on the expanded
+ * form, so the buttons were effectively unreachable.
+ *
+ * `lockscreenVisibility: PRIVATE` is a product decision, not a default. "Did you take your
+ * meds?" on a lockscreen is readable by anyone who picks up the phone, and hair loss is exactly
+ * the sort of thing people are treating privately. Content stays hidden until unlocked.
+ *
+ * Idempotent — re-registering a channel updates it.
+ */
+export async function ensureDoseChannel() {
+  const Notifications = getNotificationsModule();
+  if (!Notifications || Platform.OS !== 'android') return;
+
+  await Notifications.setNotificationChannelAsync(DOSE_CHANNEL_ID, {
+    name: 'Dose reminders',
+    importance: Notifications.AndroidImportance.HIGH,
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
+    vibrationPattern: [0, 250],
+    showBadge: false,
+  });
+}
 
 export async function requestNotificationPermissions(): Promise<boolean> {
   const Notifications = getNotificationsModule();
@@ -85,6 +113,7 @@ export async function rescheduleRoutineReminders(items: RoutineItemSchedule[]) {
   if (!Notifications) return;
 
   await ensureDoseResponseCategory();
+  await ensureDoseChannel();
   await cancelAllDoseReminders();
 
   for (const batch of buildBatchedReminders(items)) {
@@ -102,6 +131,7 @@ export async function rescheduleRoutineReminders(items: RoutineItemSchedule[]) {
         weekday: batch.weekday,
         hour,
         minute,
+        channelId: DOSE_CHANNEL_ID,
       },
     });
   }
@@ -113,6 +143,7 @@ export async function scheduleReprompt(itemIds: string[], time: string, at: Date
   if (!Notifications) return;
 
   await ensureDoseResponseCategory();
+  await ensureDoseChannel();
   const identifier = `reprompt-${time.replace(':', '')}`;
   await Notifications.cancelScheduledNotificationAsync(identifier).catch(() => {});
   await Notifications.scheduleNotificationAsync({
@@ -123,7 +154,11 @@ export async function scheduleReprompt(itemIds: string[], time: string, at: Date
       categoryIdentifier: DOSE_RESPONSE_CATEGORY,
       data: { itemIds, time },
     },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: at,
+      channelId: DOSE_CHANNEL_ID,
+    },
   });
 }
 
