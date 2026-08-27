@@ -51,7 +51,8 @@
           "recordAudioAndroid": false
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "./plugins/with-backup-rules"
     ],
     "experiments": {
       "typedRoutes": true,

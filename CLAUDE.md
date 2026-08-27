@@ -78,7 +78,11 @@ Three rules, all of which have been verified rather than assumed:
 
 **Rehearse every migration against a database with real rows in it** before shipping. Apply `0000`, insert representative data, apply the new migration, and check the row counts on every table. Additive changes (`ALTER TABLE … ADD COLUMN`, new indexes) were confirmed to preserve all data; constraint-tightening changes are the ones that bite.
 
-**There is still no backup or restore.** Until there is, a migration failure on a user's device is unrecoverable for that user. That's the strongest argument for building backup early.
+**Backup is partial, and deliberately so.** `plugins/with-backup-rules.js` restricts Android Auto Backup to `SQLite/` and `progress-photos/baseline/`. Auto Backup is on by default and caps an app at **25MB — past which Android stops backing the app up entirely, not partially**, so accumulating photo sets would silently cost the database its backup too, right as the history became worth keeping. Include-only rules keep the total permanently small.
+
+So a reinstall restores the routine and every logged dose plus the Day 0 photos every comparison is measured against; **later photo sets are lost**. That is not a substitute for real export/restore, and a migration failure mid-update is still unrecoverable for that user. Both remain the strongest argument for building proper backup early.
+
+Baseline photos are filed by `savePhoto` into a `baseline/` subdirectory, decided by `isBaselineDate` (date equals the first routine's start — the same rule `photo-sets.ts` uses for its "Day 0" label). It's derived rather than a flag passed from onboarding, so a Day 0 angle re-shot later through the normal capture flow still lands inside the backup.
 
 Because a reset is currently free, it's the right moment to add any constraint that's been deferred — after launch, each one costs a data migration.
 

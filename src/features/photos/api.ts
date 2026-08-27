@@ -4,7 +4,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 
 import { db } from '@/db/client';
 import { photos } from '@/db/schema';
-import { getActiveRoutine } from '@/features/routine/api';
+import { getActiveRoutine, getAllRoutines } from '@/features/routine/api';
 import { computeNextPhotoReminderDate } from '@/features/photos/photo-reminder';
 import { getAppSettings, setLastPhotoSetDate } from '@/features/onboarding/settings-api';
 import { dateStringAt, today, type DateString } from '@/lib/date';
@@ -12,14 +12,48 @@ import { schedulePhotoReminder } from '@/lib/notifications';
 
 export type PhotoAngle = 'crown' | 'hairline' | 'left_temple' | 'right_temple';
 
-// Built lazily, not at module scope: expo-file-system has no native module during
-// server-side rendering (`expo start --web`'s SSR pass runs route modules in plain Node).
-function getPhotosDirectory() {
-  const dir = new Directory(Paths.document, 'progress-photos');
+/**
+ * Baseline photos live in their own subdirectory so Android's Auto Backup can include *just*
+ * them.
+ *
+ * Auto Backup caps an app at 25MB and, past that, stops backing the app up **entirely** —
+ * including the database that would otherwise have fitted easily. Four photos every fifteen days
+ * crosses that within months, silently, right as the history becomes worth keeping.
+ *
+ * Backing up only the Day 0 set keeps the total small and saves the photos that can't be
+ * retaken: every future comparison is measured against them. Later sets are still lost on a
+ * reinstall — that needs real backup, not this.
+ *
+ * Built lazily, not at module scope: expo-file-system has no native module during server-side
+ * rendering (`expo start --web`'s SSR pass runs route modules in plain Node).
+ */
+export const BASELINE_DIRNAME = 'baseline';
+
+function getPhotosDirectory(baseline = false) {
+  const dir = baseline
+    ? new Directory(Paths.document, 'progress-photos', BASELINE_DIRNAME)
+    : new Directory(Paths.document, 'progress-photos');
   if (!dir.exists) {
     dir.create({ intermediates: true, idempotent: true });
   }
   return dir;
+}
+
+/**
+ * Day 0 is the first routine's start date — the same definition `photo-sets.ts` uses for its
+ * "Day 0 · baseline" label, so the two can't disagree about which set is the baseline.
+ *
+ * Before any routine exists (the onboarding capture happens *before* the routine is written)
+ * there's nothing to compare against, so the first set captured is treated as baseline.
+ */
+async function isBaselineDate(date: DateString): Promise<boolean> {
+  try {
+    const all = await getAllRoutines();
+    const start = all[0]?.startDate;
+    return start === undefined || date === start;
+  } catch {
+    return false; // never fail a photo save over where it gets filed
+  }
 }
 
 /** Best-effort file removal — a missing file shouldn't block replacing a photo. */
@@ -51,7 +85,14 @@ export async function savePhoto(
 ) {
   const source = new File(sourceUri);
   const id = randomUUID();
-  const destination = new File(getPhotosDirectory(), `${id}${source.extension || '.jpg'}`);
+  // Derived, not passed in: a photo is baseline if it's from the first routine's start date.
+  // A flag set during onboarding would miss a Day 0 angle re-shot later through the normal
+  // capture flow, which would then silently fall outside the backup.
+  const baseline = await isBaselineDate(date);
+  const destination = new File(
+    getPhotosDirectory(baseline),
+    `${id}${source.extension || '.jpg'}`
+  );
   await source.copy(destination);
 
   const existing = await db
