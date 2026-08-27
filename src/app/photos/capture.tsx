@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import { ThemedView } from '@/components/themed-view';
+import { useAsyncAction } from '@/hooks/use-async-action';
 import {
   captureCurrentPhoto,
   getPhotosForDate,
@@ -17,7 +18,7 @@ import {
 
 export default function CapturePhotosScreen() {
   const queryClient = useQueryClient();
-  const [saving, setSaving] = useState(false);
+  const { run, pending: saving } = useAsyncAction("Couldn't save your photos");
 
   // A set is one day's four angles, so re-opening capture continues today's set rather than
   // starting a new one — angles already shot show up filled, and re-shooting one replaces it.
@@ -33,8 +34,7 @@ export default function CapturePhotosScreen() {
   }, [existing]);
 
   async function save(captured: CapturedPhotos) {
-    setSaving(true);
-    try {
+    await run(async () => {
       // Only write angles whose image actually changed — re-saving an untouched one would
       // pointlessly copy a file onto a new path and delete the original.
       const changed = (Object.entries(captured) as [PhotoAngle, string][]).filter(
@@ -52,9 +52,7 @@ export default function CapturePhotosScreen() {
       queryClient.invalidateQueries({ queryKey: ['timeline'] });
       queryClient.invalidateQueries({ queryKey: ['settings'] });
       router.back();
-    } finally {
-      setSaving(false);
-    }
+    });
   }
 
   return (

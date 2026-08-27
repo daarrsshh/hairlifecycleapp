@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -9,6 +9,7 @@ import { Spacing } from '@/constants/theme';
 import { RoutineBuilder } from '@/features/routine/components/routine-builder';
 import { describeRoutine } from '@/features/routine/describe';
 import { useRoutineDraft } from '@/features/routine/draft-store';
+import { useAsyncAction } from '@/hooks/use-async-action';
 import {
   getActiveRoutine,
   getAllRoutineItems,
@@ -28,7 +29,7 @@ export default function NewRoutineScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const draft = useRoutineDraft();
-  const [submitting, setSubmitting] = useState(false);
+  const { run, pending: submitting } = useAsyncAction("Couldn't save your routine");
   // A one-shot latch, not render state — seeding shouldn't itself trigger a re-render.
   const seeded = useRef(false);
 
@@ -67,16 +68,13 @@ export default function NewRoutineScreen() {
   }, [current]);
 
   async function confirm() {
-    setSubmitting(true);
-    try {
+    await run(async () => {
       await startRoutine({ items: draft.items });
       await rescheduleRoutineReminders(await getAllRoutineItems());
       draft.reset();
       queryClient.invalidateQueries();
       router.replace('/(tabs)/routine');
-    } finally {
-      setSubmitting(false);
-    }
+    });
   }
 
   const canSave = draft.items.length > 0 && !submitting;

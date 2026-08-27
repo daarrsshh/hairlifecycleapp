@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
-import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -9,6 +8,7 @@ import { Spacing } from '@/constants/theme';
 import { getAuthStatus } from '@/features/auth/api';
 import { resetAllData } from '@/features/dev/reset-data';
 import { useRoutineDraft } from '@/features/routine/draft-store';
+import { useAsyncAction } from '@/hooks/use-async-action';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -24,7 +24,7 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const { data: auth } = useQuery({ queryKey: ['auth'], queryFn: getAuthStatus });
-  const [resetting, setResetting] = useState(false);
+  const { run, pending: resetting } = useAsyncAction("Couldn't reset app data");
 
   /** Destructive and irreversible, so it asks first — even in a dev-only affordance. */
   function confirmReset() {
@@ -36,19 +36,15 @@ export default function SettingsScreen() {
         {
           text: 'Reset',
           style: 'destructive',
-          onPress: async () => {
-            setResetting(true);
-            try {
+          onPress: () =>
+            run(async () => {
               await resetAllData();
               useRoutineDraft.getState().reset();
               // Clear every cache before routing, or the gate re-reads a stale profile and
               // sends you back to the tabs instead of onboarding.
               queryClient.clear();
               router.replace('/');
-            } finally {
-              setResetting(false);
-            }
-          },
+            }),
         },
       ]
     );
