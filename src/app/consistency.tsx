@@ -39,13 +39,15 @@ export default function ConsistencyScreen() {
           <ThemedText type="title" style={styles.streakNumber}>
             {currentStreak}
           </ThemedText>
-          <ThemedText type="heading">
-            {currentStreak === 1 ? 'day in a row' : 'days in a row'}
-          </ThemedText>
+          {/* "days in a row" alone doesn't say in a row of *what*, and the two surprising rules
+              — a day counts only when everything scheduled is done, and rest or paused days are
+              skipped rather than held against you — were nowhere on the screen. Wording matches
+              Home's badge so the same number isn't described two different ways. */}
+          <ThemedText type="heading">day streak</ThemedText>
           <ThemedText themeColor="textSecondary" type="small">
             {currentStreak === 0
-              ? 'Today counts — log a dose to start.'
-              : 'Pausing freezes this rather than breaking it.'}
+              ? 'A day counts once everything scheduled is done. Today still counts — log a dose to start.'
+              : 'Days where you took everything scheduled. Rest days and pauses are skipped, not counted against you.'}
           </ThemedText>
         </ThemedView>
 
