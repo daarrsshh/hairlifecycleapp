@@ -14,7 +14,6 @@ import {
   type ScheduledDose,
 } from '@/features/dose-log/doseState';
 import {
-  computeBestStreak,
   computeCurrentStreak,
   computeItemConsistency,
   computeMonthRatio,
@@ -114,7 +113,6 @@ export interface ItemConsistencyRow {
 
 export interface ConsistencyStats {
   currentStreak: number;
-  bestStreak: number;
   monthRatio: { completed: number; total: number };
   /** Per-item, over the calendar week so far — "LLLT: 3 of 3 this week". */
   itemsThisWeek: ItemConsistencyRow[];
@@ -131,9 +129,6 @@ export function useConsistencyStats() {
       const [year, month] = ctx.currentDate.split('-').map(Number);
 
       const currentStreak = computeCurrentStreak(ctx.currentDate, ctx.dayStatus, ctx.earliestStart);
-      const bestStreak = ctx.earliestStart
-        ? computeBestStreak(ctx.earliestStart, ctx.currentDate, ctx.dayStatus)
-        : 0;
       const monthRatio = computeMonthRatio(year, month, ctx.currentDate, ctx.dayStatus);
 
       // Same calendar week as Home's strip — both surfaces say "this week", so they must mean
@@ -167,7 +162,7 @@ export function useConsistencyStats() {
         monthDayStatuses[date] = ctx.dayStatus(date);
       }
 
-      return { currentStreak, bestStreak, monthRatio, itemsThisWeek, monthDayStatuses, year, month };
+      return { currentStreak, monthRatio, itemsThisWeek, monthDayStatuses, year, month };
     },
   });
 }
