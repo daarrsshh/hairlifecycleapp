@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Tabs } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
+import { Icon } from '@/components/icon';
 import { ScrollView, StyleSheet } from 'react-native';
 
 import { LinkButton } from '@/components/link-button';
@@ -35,10 +35,10 @@ export default function PhotosScreen() {
         options={{
           title: 'Photos',
           tabBarIcon: ({ color }) => (
-            <SymbolView
+            <Icon
               name={{ ios: 'camera.fill', android: 'photo_camera', web: 'photo_camera' }}
               size={22}
-              tintColor={color}
+              color={color}
             />
           ),
         }}
@@ -83,10 +83,10 @@ export default function PhotosScreen() {
                 {describeSetCoverage(set)}
               </ThemedText>
             </ThemedView>
-            <SymbolView
+            <Icon
               name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
               size={18}
-              tintColor={theme.textSecondary}
+              color={theme.textSecondary}
             />
           </LinkButton>
         ))}

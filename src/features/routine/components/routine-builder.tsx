@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
-import { SymbolView, type SymbolViewProps } from 'expo-symbols';
+import { Icon, type IconName } from '@/components/icon';
 
 import { LinkButton } from '@/components/link-button';
 import { ThemedText } from '@/components/themed-text';
@@ -12,7 +12,7 @@ import { describeSchedule } from '@/features/routine/describe';
 import { useRoutineDraft } from '@/features/routine/draft-store';
 import { useTheme } from '@/hooks/use-theme';
 
-export const ITEM_TYPE_ICON: Record<RoutineItemType, SymbolViewProps['name']> = {
+export const ITEM_TYPE_ICON: Record<RoutineItemType, IconName> = {
   oral: { ios: 'pills.fill', android: 'medication', web: 'medication' },
   topical: { ios: 'drop.fill', android: 'water_drop', web: 'water_drop' },
   device: { ios: 'wave.3.right', android: 'devices', web: 'devices' },
@@ -51,7 +51,7 @@ export function RoutineBuilder({
         {items.map((item, index) => (
           <ThemedView key={index} type="backgroundElement" style={styles.card}>
             <ThemedView type="backgroundElement" style={styles.cardHeader}>
-              <SymbolView name={ITEM_TYPE_ICON[item.type]} size={20} tintColor={theme.primary} accessibilityElementsHidden importantForAccessibility="no" />
+              <Icon name={ITEM_TYPE_ICON[item.type]} size={20} color={theme.primary} accessibilityElementsHidden importantForAccessibility="no" />
               <ThemedView type="backgroundElement" style={styles.cardTitle}>
                 <ThemedText type="smallBold">
                   {item.name}

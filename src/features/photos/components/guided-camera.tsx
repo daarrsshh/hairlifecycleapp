@@ -1,5 +1,5 @@
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
-import { SymbolView } from 'expo-symbols';
+import { Icon } from '@/components/icon';
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -77,14 +77,14 @@ export function GuidedCamera({
             hitSlop={12}
             accessibilityLabel="Flip camera"
             style={styles.flipButton}>
-            <SymbolView
+            <Icon
               name={{
                 ios: 'arrow.triangle.2.circlepath.camera',
                 android: 'flip_camera_android',
                 web: 'flip_camera_android',
               }}
               size={26}
-              tintColor="#fff"
+              color="#fff"
             />
           </Pressable>
         </View>

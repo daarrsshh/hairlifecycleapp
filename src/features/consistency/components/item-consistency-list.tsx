@@ -1,4 +1,4 @@
-import { SymbolView } from 'expo-symbols';
+import { Icon } from '@/components/icon';
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -35,10 +35,10 @@ export function ItemConsistencyList({ items }: { items: ItemConsistencyRow[] }) 
         return (
           <View key={item.itemId} style={styles.row}>
             <View style={styles.labelRow}>
-              <SymbolView
+              <Icon
                 name={ITEM_TYPE_ICON[item.type]}
                 size={16}
-                tintColor={pending ? theme.textSecondary : theme.primary}
+                color={pending ? theme.textSecondary : theme.primary}
               />
               <ThemedText type="small" style={styles.name} numberOfLines={1}>
                 {item.name}

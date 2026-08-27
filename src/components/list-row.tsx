@@ -1,4 +1,4 @@
-import { SymbolView, type SymbolViewProps } from 'expo-symbols';
+import { Icon, type IconName } from '@/components/icon';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -43,13 +43,13 @@ export function ListRow({
   href: React.ComponentProps<typeof LinkButton>['href'];
   title: string;
   subtitle?: string;
-  icon?: SymbolViewProps['name'];
+  icon?: IconName;
   onPress?: () => void;
 }) {
   const theme = useTheme();
   return (
     <LinkButton href={href} onPress={onPress} style={styles.row}>
-      {icon ? <SymbolView name={icon} size={20} tintColor={theme.primary} /> : null}
+      {icon ? <Icon name={icon} size={20} color={theme.primary} /> : null}
       <View style={styles.rowText}>
         <ThemedText type="smallBold" numberOfLines={2}>
           {title}
@@ -60,10 +60,10 @@ export function ListRow({
           </ThemedText>
         ) : null}
       </View>
-      <SymbolView
+      <Icon
         name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
         size={16}
-        tintColor={theme.textSecondary}
+        color={theme.textSecondary}
       />
     </LinkButton>
   );

@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
+import { Icon } from '@/components/icon';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
@@ -24,10 +24,10 @@ export default function LearnScreen() {
         options={{
           title: 'Learn',
           tabBarIcon: ({ color }) => (
-            <SymbolView
+            <Icon
               name={{ ios: 'book.fill', android: 'menu_book', web: 'menu_book' }}
               size={22}
-              tintColor={color}
+              color={color}
             />
           ),
         }}
@@ -36,10 +36,10 @@ export default function LearnScreen() {
         <ThemedText type="subtitle">Learn</ThemedText>
 
         <View style={[styles.search, { borderColor: theme.border }]}>
-          <SymbolView
+          <Icon
             name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
             size={18}
-            tintColor={theme.textSecondary}
+            color={theme.textSecondary}
           />
           <TextInput
             value={query}
@@ -50,10 +50,10 @@ export default function LearnScreen() {
           />
           {searching ? (
             <Pressable onPress={() => setQuery('')} hitSlop={10} accessibilityLabel="Clear search">
-              <SymbolView
+              <Icon
                 name={{ ios: 'xmark.circle.fill', android: 'cancel', web: 'cancel' }}
                 size={18}
-                tintColor={theme.textSecondary}
+                color={theme.textSecondary}
               />
             </Pressable>
           ) : null}
@@ -135,10 +135,10 @@ function FaqRow({ question, answer }: { question: string; answer: string }) {
         <ThemedText type="smallBold" style={styles.faqQuestion}>
           {question}
         </ThemedText>
-        <SymbolView
+        <Icon
           name={{ ios: 'chevron.down', android: 'expand_more', web: 'expand_more' }}
           size={16}
-          tintColor={theme.textSecondary}
+          color={theme.textSecondary}
           style={open ? styles.chevronOpen : undefined}
         />
       </View>

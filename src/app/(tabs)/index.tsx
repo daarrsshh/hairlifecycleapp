@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Tabs } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
+import { Icon } from '@/components/icon';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
@@ -30,7 +30,7 @@ function HomeTabScreen() {
       options={{
         title: 'Home',
         tabBarIcon: ({ color }) => (
-          <SymbolView name={{ ios: 'house.fill', android: 'home', web: 'home' }} size={22} tintColor={color} />
+          <Icon name={{ ios: 'house.fill', android: 'home', web: 'home' }} size={22} color={color} />
         ),
       }}
     />
@@ -148,7 +148,7 @@ export default function HomeScreen() {
         {todayItems.map((item) => (
           <ThemedView key={item.itemId} type="backgroundElement" style={styles.itemCard}>
             <ThemedView type="backgroundElement" style={styles.itemHeader}>
-              <SymbolView name={ITEM_TYPE_ICON[item.type]} size={22} tintColor={theme.primary} accessibilityElementsHidden importantForAccessibility="no" />
+              <Icon name={ITEM_TYPE_ICON[item.type]} size={22} color={theme.primary} accessibilityElementsHidden importantForAccessibility="no" />
               {/* `heading`, not `smallBold` — the item is the thing you're here to act on, so it
                   should outrank the dose times beneath it rather than matching them. */}
               <ThemedText type="heading" style={styles.itemName}>

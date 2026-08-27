@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
+import { Icon } from '@/components/icon';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -74,10 +74,10 @@ export function ComparisonSlider({
 
         <Animated.View pointerEvents="none" style={[styles.divider, dividerStyle]} />
         <Animated.View pointerEvents="none" style={[styles.knob, knobStyle, { top: height / 2 - KNOB_SIZE / 2 }]}>
-          <SymbolView
+          <Icon
             name={{ ios: 'arrow.left.and.right', android: 'swap_horiz', web: 'swap_horiz' }}
             size={20}
-            tintColor="#1B1A17"
+            color="#1B1A17"
           />
         </Animated.View>
 

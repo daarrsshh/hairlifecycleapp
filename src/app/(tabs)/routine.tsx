@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Tabs } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
+import { Icon } from '@/components/icon';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ListDivider, ListGroup, ListRow } from '@/components/list-row';
@@ -65,10 +65,10 @@ export default function RoutineScreen() {
         options={{
           title: 'Routine',
           tabBarIcon: ({ color }) => (
-            <SymbolView
+            <Icon
               name={{ ios: 'checklist', android: 'checklist', web: 'checklist' }}
               size={22}
-              tintColor={color}
+              color={color}
             />
           ),
         }}
@@ -106,14 +106,14 @@ export default function RoutineScreen() {
               <Pressable
                 onPress={togglePause}
                 style={[styles.pauseButton, { borderColor: theme.border }]}>
-                <SymbolView
+                <Icon
                   name={
                     paused
                       ? { ios: 'play.fill', android: 'play_arrow', web: 'play_arrow' }
                       : { ios: 'pause.fill', android: 'pause', web: 'pause' }
                   }
                   size={16}
-                  tintColor={theme.text}
+                  color={theme.text}
                 />
                 <ThemedText type="smallBold">{paused ? 'Resume routine' : 'Pause routine'}</ThemedText>
               </Pressable>
@@ -162,7 +162,7 @@ export default function RoutineScreen() {
             {items.map((item) => (
               <ThemedView key={item.id} type="backgroundElement" style={styles.itemCard}>
                 <View style={[styles.itemIcon, { backgroundColor: theme.backgroundSelected }]}>
-                  <SymbolView name={ITEM_TYPE_ICON[item.type]} size={20} tintColor={theme.primary} accessibilityElementsHidden importantForAccessibility="no" />
+                  <Icon name={ITEM_TYPE_ICON[item.type]} size={20} color={theme.primary} accessibilityElementsHidden importantForAccessibility="no" />
                 </View>
                 <View style={styles.itemText}>
                   <ThemedText type="heading" numberOfLines={1}>
