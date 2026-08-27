@@ -3,6 +3,7 @@ import { Redirect } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
+import { ensureAnonymousSession } from '@/features/auth/api';
 import { reconcileMissedDoses } from '@/features/dose-log/api';
 import { getProfile } from '@/features/onboarding/api';
 import { getAllRoutines } from '@/features/routine/api';
@@ -29,6 +30,19 @@ export default function Index() {
       }
     })();
   }, [isLoading, profile]);
+
+  /*
+   * Deliberately its own effect, deliberately not awaited, and deliberately not in the splash
+   * path above. Anonymous sign-in needs a network round trip; this app has always worked with
+   * no connection, so a slow or unreachable Supabase must not delay the splash by even a frame,
+   * and a failure must not surface to someone who never asked for an account. It resolves to
+   * `offline` and the next launch retries.
+   */
+  useEffect(() => {
+    ensureAnonymousSession()
+      .then((status) => console.log('[auth]', status.state))
+      .catch(() => {});
+  }, []);
 
   if (isLoading) return null;
 

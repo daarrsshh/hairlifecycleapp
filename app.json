@@ -50,7 +50,8 @@
           "cameraPermission": "Used to line up your progress photos consistently, angle by angle.",
           "recordAudioAndroid": false
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

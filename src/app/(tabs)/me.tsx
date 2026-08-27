@@ -8,6 +8,7 @@ import { LinkButton } from '@/components/link-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
+import { getAuthStatus } from '@/features/auth/api';
 import { getAppSettings, setNotificationsEnabled } from '@/features/onboarding/settings-api';
 import { getAllRoutineItems } from '@/features/routine/api';
 import { useRoutineDraft } from '@/features/routine/draft-store';
@@ -19,6 +20,7 @@ export default function MeScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: getAppSettings });
+  const { data: auth } = useQuery({ queryKey: ['auth'], queryFn: getAuthStatus });
   const [resetting, setResetting] = useState(false);
 
   /** Destructive and irreversible, so it asks first — even in a dev-only affordance. */
@@ -95,6 +97,25 @@ export default function MeScreen() {
             <LinkButton href="/routine/new" onPress={() => useRoutineDraft.getState().reset()}>
                 <ThemedText type="linkPrimary">Edit routine &amp; reminder times</ThemedText>
               </LinkButton>
+          </ThemedView>
+        ) : null}
+
+        {/* Stated plainly rather than buried in a policy: an account exists, and it currently
+            holds nothing. Someone who discovers later that an app quietly made them an account
+            has every reason to distrust what else it did. */}
+        {auth && auth.state !== 'unconfigured' ? (
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <ThemedText type="smallBold">Account</ThemedText>
+            <ThemedText themeColor="textSecondary" type="small">
+              {auth.state === 'identified'
+                ? `Signed in as ${auth.email}.`
+                : auth.state === 'anonymous'
+                  ? 'You have an anonymous account — no email, no password, and nothing to sign in to.'
+                  : "Couldn't reach the server. Everything still works; this retries next time you open the app."}
+            </ThemedText>
+            <ThemedText themeColor="textSecondary" type="small">
+              Your routine, doses and photos stay on this phone. Nothing is uploaded.
+            </ThemedText>
           </ThemedView>
         ) : null}
 

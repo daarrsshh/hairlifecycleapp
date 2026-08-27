@@ -32,6 +32,16 @@ npm run reset-project     # moves current app/ to app-example/ and creates a bla
 
 `expo-env.d.ts`, `.expo/`, and the typed-routes declarations (`.expo/types/router.d.ts`) are generated on first `expo start` and are gitignored — **adding a new route file requires regenerating them before `tsc` will accept the route string** in `router.push`/`href`/`<Link>`. Run `npx expo start` once (Ctrl-C after "Waiting on...") to regenerate. Check this first if `tsc` rejects a route you just added; it trips people up constantly here.
 
+### Auth (anonymous-first)
+
+The app is still local-first: **no user data is uploaded, and the local SQLite schema has no `user_id` column** — it doesn't need one, since the database belongs to the one person holding the phone. Only future server-side tables need ownership.
+
+- `lib/supabase.ts` exports `supabase`, which is **`null` when `EXPO_PUBLIC_SUPABASE_URL`/`ANON_KEY` are unset** (see `.env.example`). Every caller checks for null, exactly like `getNotificationsModule()`. An unconfigured or unreachable backend must degrade to "no account", never to a crash — the app has to stay fully usable with no network.
+- Sessions are stored in `expo-secure-store` (Keystore/Keychain), not AsyncStorage: a Supabase session is a bearer token, and this app's data is medication history and scalp photos. SecureStore rejects keys outside `[A-Za-z0-9._-]`, so supabase-js's URL-derived key names are sanitized in `safeKey`.
+- `features/auth/api.ts`'s `ensureAnonymousSession()` is called **fire-and-forget from `src/app/index.tsx`, outside the splash path**. It must never be awaited before rendering: anonymous sign-in is a network round trip, and someone logging a dose offline can't be blocked by an account they never asked for. Failure resolves to `offline` and retries next launch.
+- **Why anonymous now rather than a login screen later:** adding accounts to an app that already has users forces everyone through a signup wall on update. An anonymous id issued on first launch is *upgraded in place* by `linkEmail()` when there's finally something worth an account (sync, AI analysis) — same `userId`, nothing to migrate or reconcile. `linkEmail` is deliberately unused for now.
+- The Me tab states the account's existence and that nothing is uploaded. Keep that honest as features land — an account discovered later, rather than disclosed, is the kind of thing that costs trust permanently in a health app.
+
 ### Builds: which one, and when Expo Go isn't enough
 
 Three ways to run this, and they are not interchangeable:
