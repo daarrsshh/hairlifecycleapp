@@ -2,13 +2,17 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import { LinkButton } from '@/components/link-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { useWeeklyProgress } from '@/features/consistency/hooks';
+import { useConsistencyStats, useWeeklyProgress } from '@/features/consistency/hooks';
+import { ConsistencyHeatmap } from '@/features/consistency/components/consistency-heatmap';
+import { DayDetailCard } from '@/features/consistency/components/day-detail-card';
+import { ItemConsistencyList } from '@/features/consistency/components/item-consistency-list';
 import { WeekStrip } from '@/features/consistency/components/week-strip';
 import { DoseRow } from '@/features/dose-log/components/dose-row';
 import { useLogDose, useTodayDoses } from '@/features/dose-log/hooks';
@@ -37,6 +41,11 @@ export default function HomeScreen() {
   const theme = useTheme();
   const { data, isLoading } = useTodayDoses();
   const { data: weekly } = useWeeklyProgress();
+  /* Deliberately a separate query from useTodayDoses, not a merged one: today's checklist is the
+     30-second loop this screen exists for, and it must paint without waiting on a month of
+     history being rolled up behind it. */
+  const { data: stats } = useConsistencyStats();
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: getAppSettings });
   const logDose = useLogDose();
   const queryClient = useQueryClient();
@@ -69,28 +78,19 @@ export default function HomeScreen() {
     <ThemedView style={styles.container}>
       <HomeTabScreen />
       <ScrollView contentContainerStyle={styles.content}>
-        <ThemedView style={styles.header}>
-          <ThemedView>
-            <ThemedText type="subtitle">Today</ThemedText>
-            {totalCount > 0 ? (
-              <ThemedText themeColor="textSecondary" type="small">
-                {takenCount} of {totalCount} done
-              </ThemedText>
-            ) : null}
-          </ThemedView>
-          <LinkButton href="/consistency">
-            <ThemedView type="backgroundElement" style={styles.streakBadge}>
-              <ThemedText type="smallBold">
-                {weekly && weekly.currentStreak > 0 ? `🔥 ${weekly.currentStreak} day streak` : 'Consistency'}
-              </ThemedText>
-            </ThemedView>
-          </LinkButton>
+        <ThemedView>
+          <ThemedText type="subtitle">Today</ThemedText>
+          {totalCount > 0 ? (
+            <ThemedText themeColor="textSecondary" type="small">
+              {takenCount} of {totalCount} done
+            </ThemedText>
+          ) : null}
         </ThemedView>
 
         {/* A compact week at a glance. Kept above the checklist because it's one short row —
             anything larger would push today's actual doses down the screen. */}
         {weekly ? (
-          <LinkButton href="/consistency" style={[styles.weekCard, { borderColor: theme.border }]}>
+          <ThemedView style={[styles.weekCard, { borderColor: theme.border }]}>
             <ThemedView style={styles.weekHeader}>
               <ThemedText type="smallBold">This week</ThemedText>
               <ThemedText themeColor="textSecondary" type="small">
@@ -98,7 +98,7 @@ export default function HomeScreen() {
               </ThemedText>
             </ThemedView>
             <WeekStrip days={weekly.days} />
-          </LinkButton>
+          </ThemedView>
         ) : null}
 
         {routine.status === 'paused' ? (
@@ -188,6 +188,44 @@ export default function HomeScreen() {
             ))}
           </ThemedView>
         ))}
+
+        {/* Below the checklist, never above it: today is why anyone opens this screen, and
+            history is what they scroll to when they want it. Formerly its own Consistency tab. */}
+        {stats && (stats.itemsThisWeek.length > 0 || stats.monthRatio.total > 0) ? (
+          <>
+            <ThemedText type="caption" themeColor="textSecondary" style={styles.sectionLabel}>
+              How it&apos;s going
+            </ThemedText>
+
+            {stats.itemsThisWeek.length > 0 ? (
+              <ItemConsistencyList items={stats.itemsThisWeek} />
+            ) : null}
+
+            <ThemedView type="backgroundElement" style={styles.historyCard}>
+              {/* The heatmap renders its own "August 2026" heading. */}
+              <ConsistencyHeatmap
+                year={stats.year}
+                month={stats.month}
+                dayStatuses={stats.monthDayStatuses}
+                onSelectDate={setSelectedDate}
+              />
+              <ThemedText themeColor="textSecondary" type="small" style={styles.monthSummary}>
+                {stats.monthRatio.total === 0
+                  ? 'Nothing scheduled this month yet.'
+                  : `${stats.monthRatio.completed} of ${stats.monthRatio.total} days complete`}
+              </ThemedText>
+              {/* Tapping a day to log a missed dose is PRD §4.2 and was unsignposted for a long
+                  time — a correction feature nobody can find is the same as not having one. */}
+              <ThemedText themeColor="textSecondary" type="caption">
+                Tap any day to see what was scheduled, or to log something you missed.
+              </ThemedText>
+            </ThemedView>
+
+            {selectedDate ? (
+              <DayDetailCard date={selectedDate} onClose={() => setSelectedDate(null)} />
+            ) : null}
+          </>
+        ) : null}
       </ScrollView>
     </ThemedView>
   );
@@ -197,8 +235,9 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.two, padding: Spacing.four },
   content: { padding: Spacing.four, gap: Spacing.three },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  streakBadge: { paddingVertical: Spacing.one, paddingHorizontal: Spacing.three, borderRadius: Spacing.four },
+  sectionLabel: { textTransform: 'uppercase', letterSpacing: 0.8, marginTop: Spacing.three },
+  historyCard: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.one },
+  monthSummary: { marginTop: Spacing.two },
   weekCard: {
     borderWidth: 1,
     borderRadius: Spacing.three,
