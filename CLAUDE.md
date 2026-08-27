@@ -185,7 +185,13 @@ Lessons that apply to anything added here:
 - Server-ish state is TanStack Query over the local DB; UI/draft state is Zustand. Query keys are hierarchical so prefix invalidation works: invalidating `['photos']` covers `['photos','sets']`, `['photos','set',date]`, and `['photos','angle',angle]`; `['streak']` covers `['streak','weekly']`. Keep that shape when adding queries.
 
 ### What's built vs. simplified
-There are **four tabs — Home · Routine · Photos · Learn**. The former Me tab held three controls and didn't earn a slot; its contents are now `src/app/settings.tsx`, a pushed route reached from an **App** section at the foot of the Learn tab. Settings stayed one findable place rather than being scattered, because "what does this app know about me, and how do I get my data out" is a question people go looking for an answer to — more so now that an account exists.
+There are **four tabs — Home · Routine · Photos · Learn**. The former Me tab held three controls and didn't earn a slot; its contents were **redistributed to where they're used**, not moved wholesale. Me felt useless because it was a bucket of unrelated controls, and a bucket doesn't stop being one by changing tabs.
+
+- **Dose reminders toggle → Routine.** Reminder times come from each item's own schedule, so the control is only meaningful beside the routine that generates them.
+- **Export as PDF → Routine's list.** It summarises routine and consistency data.
+- **Account disclosure + the `__DEV__` reset → `src/app/settings.tsx`**, pushed from an **App** section at the foot of Learn. What was left after emptying the bucket is genuinely low-traffic, which is why two taps deep is fine for these and was not for the rest.
+
+Note the old Me tab's "Edit routine & reminder times" pointed at `/routine/new` — the same destination as Routine's own row, under a label that misdescribed it. That flow **ends** the current routine and starts a new one; it does not edit in place. Don't reintroduce an "edit" label for it.
 
 Every PRD v1 screen exists: onboarding, Home (one card per item with a circle per dose, week strip, streak badge, photo banner), Routine (current routine, pause/resume, start new, weekly grid, Timeline), Consistency (streak/ratio/per-item stats, heatmap, tap-a-day corrections), Photos (guided capture, sets, compare), Learn, Settings (notifications toggle, PDF export, account). Not PRD-complete: the capture guide and ghost overlay (see Photos), and Learn's content is a real but not exhaustive first pass. The seeded treatment catalog (`features/routine/catalog.ts`) is a first pass pending research in `knowledge/`.
 

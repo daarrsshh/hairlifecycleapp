@@ -7,18 +7,21 @@ import { ListDivider, ListGroup, ListRow } from '@/components/list-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
+import { getAppSettings, setNotificationsEnabled } from '@/features/onboarding/settings-api';
 import { ITEM_TYPE_LABEL } from '@/features/routine/catalog';
 import { ITEM_TYPE_ICON } from '@/features/routine/components/routine-builder';
 import { describeRoutine, describeSchedule } from '@/features/routine/describe';
 import { useRoutineDraft } from '@/features/routine/draft-store';
 import {
   getActiveRoutine,
+  getAllRoutineItems,
   getItemsForRoutine,
   pauseRoutine,
   resumeRoutine,
 } from '@/features/routine/api';
 import { useTheme } from '@/hooks/use-theme';
 import { daysBetween, today } from '@/lib/date';
+import { cancelAllDoseReminders, rescheduleRoutineReminders } from '@/lib/notifications';
 
 export default function RoutineScreen() {
   const theme = useTheme();
@@ -32,11 +35,22 @@ export default function RoutineScreen() {
     },
   });
 
+  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: getAppSettings });
+
   const routine = data?.routine;
   const items = data?.items ?? [];
   const paused = routine?.status === 'paused';
   const dayCount = routine ? daysBetween(routine.startDate, today()) : 0;
   const doseCount = items.reduce((n, i) => n + i.daysOfWeek.length * i.times.length, 0);
+
+  async function toggleNotifications() {
+    if (!settings) return;
+    const next = !settings.notificationsEnabled;
+    await setNotificationsEnabled(next);
+    if (next) await rescheduleRoutineReminders(await getAllRoutineItems());
+    else await cancelAllDoseReminders();
+    queryClient.invalidateQueries({ queryKey: ['settings'] });
+  }
 
   async function togglePause() {
     if (!routine) return;
@@ -112,6 +126,36 @@ export default function RoutineScreen() {
             </ThemedView>
 
             <ThemedText type="caption" themeColor="textSecondary" style={styles.sectionLabel}>
+              Reminders
+            </ThemedText>
+            {/* Lives here, not in a settings screen: reminder times come from each item's own
+                schedule, so this is only meaningful next to the routine that generates them. */}
+            <ThemedView type="backgroundElement" style={styles.card}>
+              <Pressable style={styles.toggleRow} onPress={toggleNotifications}>
+                <View style={styles.summaryText}>
+                  <ThemedText type="smallBold">Dose reminders</ThemedText>
+                  <ThemedText themeColor="textSecondary" type="caption">
+                    {settings?.notificationsEnabled
+                      ? 'A notification at each scheduled time'
+                      : 'Off — nothing will remind you'}
+                  </ThemedText>
+                </View>
+                <ThemedView
+                  type="backgroundSelected"
+                  style={StyleSheet.flatten([
+                    styles.toggle,
+                    settings?.notificationsEnabled && { backgroundColor: theme.primary },
+                  ])}>
+                  <ThemedText
+                    type="small"
+                    style={settings?.notificationsEnabled ? { color: theme.onPrimary } : undefined}>
+                    {settings?.notificationsEnabled ? 'On' : 'Off'}
+                  </ThemedText>
+                </ThemedView>
+              </Pressable>
+            </ThemedView>
+
+            <ThemedText type="caption" themeColor="textSecondary" style={styles.sectionLabel}>
               What you&apos;re taking
             </ThemedText>
 
@@ -163,6 +207,13 @@ export default function RoutineScreen() {
           />
           <ListDivider />
           <ListRow
+            href="/export"
+            icon={{ ios: 'square.and.arrow.up', android: 'ios_share', web: 'ios_share' }}
+            title="Export as PDF"
+            subtitle="Your consistency and photos, to show a doctor"
+          />
+          <ListDivider />
+          <ListRow
             href="/routine/new"
             onPress={() => useRoutineDraft.getState().reset()}
             icon={{ ios: 'plus.circle', android: 'add_circle', web: 'add_circle' }}
@@ -196,6 +247,9 @@ const styles = StyleSheet.create({
   content: { padding: Spacing.four, gap: Spacing.three, paddingBottom: Spacing.five },
   sectionLabel: { textTransform: 'uppercase', letterSpacing: 0.8, marginTop: Spacing.two },
 
+  card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  toggle: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.one, borderRadius: Spacing.four },
   summary: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.three },
   summaryTop: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
   summaryText: { flex: 1, gap: Spacing.half },

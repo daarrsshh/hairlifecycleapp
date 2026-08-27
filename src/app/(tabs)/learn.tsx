@@ -107,7 +107,7 @@ export default function LearnScreen() {
                   href="/settings"
                   icon={{ ios: 'gearshape', android: 'settings', web: 'settings' }}
                   title="Settings"
-                  subtitle="Reminders, export, and your account"
+                  subtitle="Your account and app data"
                 />
               </ListGroup>
             </View>
