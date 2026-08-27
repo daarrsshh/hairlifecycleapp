@@ -173,6 +173,13 @@ export default function RoutineScreen() {
                 : 'Add what you take and when'
             }
           />
+          <ListDivider />
+          <ListRow
+            href="/settings"
+            icon={{ ios: 'gearshape', android: 'settings', web: 'settings' }}
+            title="Settings"
+            subtitle="Reminders, export, and your account"
+          />
         </ListGroup>
       </ScrollView>
     </ThemedView>
