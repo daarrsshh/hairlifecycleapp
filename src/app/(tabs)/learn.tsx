@@ -95,6 +95,22 @@ export default function LearnScreen() {
                 ))}
               </ListGroup>
             </View>
+
+            {/* Settings sits at the foot of the tab, below the reading material rather than
+                competing with it. Learn is the calmest surface in the app and the one people
+                browse rather than act on, which makes it a reasonable home for the things you
+                look for occasionally: reminders, export, and what the app knows about you. */}
+            <View style={styles.section}>
+              <SectionLabel>App</SectionLabel>
+              <ListGroup>
+                <ListRow
+                  href="/settings"
+                  icon={{ ios: 'gearshape', android: 'settings', web: 'settings' }}
+                  title="Settings"
+                  subtitle="Reminders, export, and your account"
+                />
+              </ListGroup>
+            </View>
           </>
         )}
       </ScrollView>
