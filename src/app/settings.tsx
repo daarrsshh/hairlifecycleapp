@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { getAuthStatus } from '@/features/auth/api';
 import { resetAllData } from '@/features/dev/reset-data';
+import { useOnboardingDraft } from '@/features/onboarding/draft-store';
 import { useRoutineDraft } from '@/features/routine/draft-store';
 import { useAsyncAction } from '@/hooks/use-async-action';
 import { useTheme } from '@/hooks/use-theme';
@@ -39,7 +40,10 @@ export default function SettingsScreen() {
           onPress: () =>
             run(async () => {
               await resetAllData();
+              // Both drafts, not just the routine one: they're persisted now, so a stale
+              // onboarding draft would survive a reset and prefill the name of the "new" user.
               useRoutineDraft.getState().reset();
+              useOnboardingDraft.getState().reset();
               // Clear every cache before routing, or the gate re-reads a stale profile and
               // sends you back to the tabs instead of onboarding.
               queryClient.clear();
