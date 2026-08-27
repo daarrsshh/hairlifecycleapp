@@ -53,14 +53,26 @@ Three ways to run this, and they are not interchangeable:
 
 **Android ignores importance changes to a notification channel that already exists.** After changing anything in `ensureDoseChannel`, clear app data or reinstall, or the old channel silently persists and the change appears to do nothing.
 
-### ⚠️ Schema changes: the rule changes completely at launch
+### 🔒 Schema changes: the pre-release rules have EXPIRED
 
-**Right now (pre-release, no real users):** when `src/db/schema.ts` changes, delete `src/db/migrations/`, run `npm run db:generate`, and **bump the versioned filename** in `src/db/client.ts` (`hairlifecycle-v3.db` → `-v4`). A regenerated `0000` collides with an older database already on a test device; bumping the name sidesteps it with no manual "clear app data" step. The cost is that **every tester loses all their data** — that's an accepted trade only because the only data is disposable test data.
+**The old workflow — delete `src/db/migrations/`, regenerate `0000`, bump the database filename — is gone. Do not do it, and do not reintroduce it.** It was only ever safe because the sole data was disposable test data. The database was renamed from `hairlifecycle-v3.db` to **`hairlifecycle.db`** before launch specifically so there is no version number left to increment.
 
-**The moment a real user installs this, both of those become destructive and must stop.** From then on:
-- **Never delete or edit a migration that has shipped.** Add a new one (`0001`, `0002`, …). Drizzle tracks which have been applied; rewriting history makes an installed app either re-run DDL against existing tables or skip changes entirely.
-- **Never change the database filename again.** It is not a version marker — it's the address of the user's data. Pointing at a new name silently abandons their entire history: every logged dose, every progress photo, months of tracking, with no error and no way back from inside the app.
-- Adding a constraint to a table that already has violating rows will fail the migration on the user's device. Migrate the data first (dedupe/backfill in the same migration), then add the constraint.
+From now on, every schema change is a **new migration**:
+
+```bash
+# edit src/db/schema.ts, then:
+npm run db:generate      # emits 0001, 0002, … alongside the existing 0000
+```
+
+Three rules, all of which have been verified rather than assumed:
+
+- **Never delete or edit a migration that has shipped.** Drizzle records which have been applied; rewriting history makes an installed app either re-run DDL against existing tables or skip changes entirely.
+- **Never change the database filename.** It is the address of the user's data, not a version marker. Pointing at a new name silently abandons every logged dose and progress photo — no error, no crash, no way back from inside the app.
+- **A constraint added to a table that already holds violating rows fails the migration on the user's device**, and there is no rollback and no backup — the app simply won't start. *Fix the data first, add the constraint second, in the same migration.* This was demonstrated: creating a unique index on `routine_items (routine_id, name)` against a database holding two items both named "Minoxidil" aborts with `UNIQUE constraint failed`; prefixing it with a `DELETE … WHERE rowid NOT IN (SELECT MIN(rowid) … GROUP BY …)` applies cleanly.
+
+**Rehearse every migration against a database with real rows in it** before shipping. Apply `0000`, insert representative data, apply the new migration, and check the row counts on every table. Additive changes (`ALTER TABLE … ADD COLUMN`, new indexes) were confirmed to preserve all data; constraint-tightening changes are the ones that bite.
+
+**There is still no backup or restore.** Until there is, a migration failure on a user's device is unrecoverable for that user. That's the strongest argument for building backup early.
 
 Because a reset is currently free, it's the right moment to add any constraint that's been deferred — after launch, each one costs a data migration.
 
