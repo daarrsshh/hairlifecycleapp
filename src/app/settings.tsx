@@ -76,8 +76,13 @@ export default function SettingsScreen() {
                     ? 'No email, no password, and nothing to sign in to.'
                     : "Couldn't reach the server. Everything still works; this retries next time you open the app."}
               </ThemedText>
+              {/* Precise, not reassuring-sounding. An account *is* created on a server, so
+                  "nothing is uploaded" was too loose — what's true is that no health data
+                  leaves the device. Overstating here is what costs trust when someone checks. */}
               <ThemedText themeColor="textSecondary" type="small">
-                Your routine, doses and photos stay on this phone. Nothing is uploaded.
+                Your routine, doses and photos never leave this phone. The account holds no
+                personal information — it exists so features that need a server can be added
+                later without asking you to sign up for something you already have.
               </ThemedText>
             </ThemedView>
           </>
