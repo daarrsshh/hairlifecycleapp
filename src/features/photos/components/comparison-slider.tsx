@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { usePhotoZoom } from '@/features/photos/components/use-photo-zoom';
 
@@ -42,13 +42,24 @@ export function ComparisonSlider({
       dividerX.value = Math.min(Math.max(dividerX.value + e.changeX, 0), width);
     });
 
+  /* Named handlers rather than inline arrows: assigning to a shared value inside JSX trips
+     react-hooks/immutability, which can't tell a Reanimated write from a render-time mutation. */
+  function showBeforeInFull() {
+    dividerX.value = withTiming(width);
+  }
+  function showAfterInFull() {
+    dividerX.value = withTiming(0);
+  }
+
   const beforeClipStyle = useAnimatedStyle(() => ({ width: dividerX.value }));
   const dividerStyle = useAnimatedStyle(() => ({ left: dividerX.value - 1 }));
   const knobStyle = useAnimatedStyle(() => ({ left: dividerX.value - KNOB_SIZE / 2 }));
 
   return (
     <GestureDetector gesture={Gesture.Simultaneous(dividerPan, zoom.gesture)}>
-      <View style={[styles.frame, { width, height }]}>
+      <View
+        style={[styles.frame, { width, height }]}
+        accessibilityLabel={`Comparison between ${beforeLabel} and ${afterLabel}. Drag to wipe between them, or tap a label to see one in full.`}>
         <Animated.View style={zoom.style}>
           <Image source={{ uri: afterUri }} style={{ width, height }} contentFit="cover" />
         </Animated.View>
@@ -70,12 +81,24 @@ export function ComparisonSlider({
           />
         </Animated.View>
 
-        <View pointerEvents="none" style={[styles.tag, styles.tagLeft]}>
+        {/* Tappable, not decorative. The divider is drag-only, which left before/after
+            comparison unusable without a precise gesture — for a screen reader, a tremor, or
+            just one-handed. Tapping a tag jumps the divider to that end, which is what most
+            people want from the control anyway. */}
+        <Pressable
+          onPress={showBeforeInFull}
+          style={[styles.tag, styles.tagLeft]}
+          accessibilityRole="button"
+          accessibilityLabel={`Show ${beforeLabel} photo in full`}>
           <Text style={styles.tagText}>{beforeLabel}</Text>
-        </View>
-        <View pointerEvents="none" style={[styles.tag, styles.tagRight]}>
+        </Pressable>
+        <Pressable
+          onPress={showAfterInFull}
+          style={[styles.tag, styles.tagRight]}
+          accessibilityRole="button"
+          accessibilityLabel={`Show ${afterLabel} photo in full`}>
           <Text style={styles.tagText}>{afterLabel}</Text>
-        </View>
+        </Pressable>
       </View>
     </GestureDetector>
   );

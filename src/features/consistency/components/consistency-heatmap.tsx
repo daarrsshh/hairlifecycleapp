@@ -55,13 +55,25 @@ export function ConsistencyHeatmap({
 
             const status = dayStatuses[date];
             const dayNumber = Number(date.slice(-2));
+            const disabled = status === undefined || status === 'no-treatment';
             return (
               <View key={date} style={styles.cell}>
+                {/* Unlabelled, this whole grid reads as thirty-one bare numbers — no status, no
+                    month, and no hint that a day can be tapped to fix a missed dose. The
+                    corrections feature was not just undiscoverable but unusable. */}
                 <Pressable
-                  disabled={status === undefined || status === 'no-treatment'}
+                  disabled={disabled}
                   onPress={() => onSelectDate?.(date)}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled }}
+                  accessibilityLabel={describeDay(dayNumber, month, year, status)}
+                  accessibilityHint={disabled ? undefined : 'Opens what was scheduled that day'}
                   style={[styles.dayCell, { backgroundColor: cellColor(status) }]}>
-                  <ThemedText type="small" style={styles.dayLabel}>
+                  <ThemedText
+                    type="small"
+                    style={styles.dayLabel}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no">
                     {dayNumber}
                   </ThemedText>
                 </Pressable>
@@ -72,6 +84,20 @@ export function ConsistencyHeatmap({
       ))}
     </View>
   );
+}
+
+const STATUS_DESCRIPTION: Record<string, string> = {
+  complete: 'everything taken',
+  incomplete: 'something missed',
+  'in-progress': 'still in progress',
+  'no-treatment': 'nothing scheduled',
+};
+
+/** "12 August, everything taken" — the colour of the cell, said aloud. */
+function describeDay(day: number, month: number, year: number, status: string | undefined): string {
+  const monthName = new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: 'long' });
+  const described = status ? STATUS_DESCRIPTION[status] : undefined;
+  return described ? `${day} ${monthName}, ${described}` : `${day} ${monthName}`;
 }
 
 const styles = StyleSheet.create({

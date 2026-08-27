@@ -28,8 +28,14 @@ export function WeekStrip({ days }: { days: WeekDay[] }) {
 
   return (
     <ThemedView style={styles.row}>
+      {/* Grouped per day so a screen reader hears "Monday, everything taken" rather than seven
+          disembodied letters followed by seven unannounced dots. */}
       {days.map((day) => (
-        <View key={day.date} style={[styles.cell, day.isFuture && styles.futureCell]}>
+        <View
+          key={day.date}
+          style={[styles.cell, day.isFuture && styles.futureCell]}
+          accessible
+          accessibilityLabel={describeDay(day)}>
           <ThemedText type="small" themeColor="textSecondary" style={styles.label}>
             {WEEKDAY_INITIALS[dayOfWeek(day.date)]}
           </ThemedText>
@@ -47,6 +53,22 @@ export function WeekStrip({ days }: { days: WeekDay[] }) {
       ))}
     </ThemedView>
   );
+}
+
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+const STATUS_DESCRIPTION: Record<DayStatus, string> = {
+  complete: 'everything taken',
+  incomplete: 'something missed',
+  'in-progress': 'still in progress',
+  'no-treatment': 'nothing scheduled',
+};
+
+function describeDay(day: WeekDay): string {
+  const name = WEEKDAY_NAMES[dayOfWeek(day.date)];
+  if (day.isFuture) return `${name}, still to come`;
+  const today = day.isToday ? 'Today, ' : '';
+  return `${today}${name}, ${STATUS_DESCRIPTION[day.status]}`;
 }
 
 const styles = StyleSheet.create({

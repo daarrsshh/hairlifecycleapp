@@ -162,7 +162,7 @@ export default function RoutineScreen() {
             {items.map((item) => (
               <ThemedView key={item.id} type="backgroundElement" style={styles.itemCard}>
                 <View style={[styles.itemIcon, { backgroundColor: theme.backgroundSelected }]}>
-                  <SymbolView name={ITEM_TYPE_ICON[item.type]} size={20} tintColor={theme.primary} />
+                  <SymbolView name={ITEM_TYPE_ICON[item.type]} size={20} tintColor={theme.primary} accessibilityElementsHidden importantForAccessibility="no" />
                 </View>
                 <View style={styles.itemText}>
                   <ThemedText type="heading" numberOfLines={1}>

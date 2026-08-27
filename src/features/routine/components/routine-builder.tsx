@@ -51,7 +51,7 @@ export function RoutineBuilder({
         {items.map((item, index) => (
           <ThemedView key={index} type="backgroundElement" style={styles.card}>
             <ThemedView type="backgroundElement" style={styles.cardHeader}>
-              <SymbolView name={ITEM_TYPE_ICON[item.type]} size={20} tintColor={theme.primary} />
+              <SymbolView name={ITEM_TYPE_ICON[item.type]} size={20} tintColor={theme.primary} accessibilityElementsHidden importantForAccessibility="no" />
               <ThemedView type="backgroundElement" style={styles.cardTitle}>
                 <ThemedText type="smallBold">
                   {item.name}

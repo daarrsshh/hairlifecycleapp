@@ -148,7 +148,7 @@ export default function HomeScreen() {
         {todayItems.map((item) => (
           <ThemedView key={item.itemId} type="backgroundElement" style={styles.itemCard}>
             <ThemedView type="backgroundElement" style={styles.itemHeader}>
-              <SymbolView name={ITEM_TYPE_ICON[item.type]} size={22} tintColor={theme.primary} />
+              <SymbolView name={ITEM_TYPE_ICON[item.type]} size={22} tintColor={theme.primary} accessibilityElementsHidden importantForAccessibility="no" />
               {/* `heading`, not `smallBold` — the item is the thing you're here to act on, so it
                   should outrank the dose times beneath it rather than matching them. */}
               <ThemedText type="heading" style={styles.itemName}>
@@ -167,6 +167,7 @@ export default function HomeScreen() {
                 key={dose.time}
                 time={dose.time}
                 state={dose.state}
+                itemName={item.name}
                 onTaken={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   logDose.mutate({

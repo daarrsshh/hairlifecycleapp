@@ -52,7 +52,7 @@ export default function WeeklyRoutineScreen() {
               <View key={item.id} style={styles.itemRow}>
                 <View style={styles.nameCell}>
                   <View style={styles.nameLine}>
-                    <SymbolView name={ITEM_TYPE_ICON[item.type]} size={16} tintColor={theme.textSecondary} />
+                    <SymbolView name={ITEM_TYPE_ICON[item.type]} size={16} tintColor={theme.textSecondary} accessibilityElementsHidden importantForAccessibility="no" />
                     <ThemedText type="small" numberOfLines={1}>
                       {item.name}
                     </ThemedText>
