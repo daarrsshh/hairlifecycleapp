@@ -9,7 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { db } from '@/db/client';
 import migrations from '@/db/migrations/migrations';
-import { DoseNotificationResponder } from '@/features/dose-log/notification-responder';
+import { NotificationSetup } from '@/features/dose-log/notification-setup';
 import { useIconFont } from '@/hooks/use-icon-font';
 import { queryClient } from '@/lib/queryClient';
 
@@ -92,7 +92,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.root}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <DoseNotificationResponder />
+          <NotificationSetup />
           {/* Deliberately no per-route <Stack.Screen> children here — declaring ~10 of them with
               custom options previously hung native-stack screen registration on-device (Android,
               Expo Go SDK 57). Screens that want a header/title set it themselves via an inline

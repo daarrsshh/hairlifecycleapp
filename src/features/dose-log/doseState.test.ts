@@ -1,6 +1,5 @@
 import {
   computeEffectiveState,
-  computeRepromptTime,
   dayOfWeek,
   getScheduledDoses,
   resolveDayProgress,
@@ -51,20 +50,6 @@ describe('computeEffectiveState', () => {
 
   it('treats a missing log for a past day as missed', () => {
     expect(computeEffectiveState(undefined, '2026-08-19', '2026-08-22')).toBe('missed');
-  });
-});
-
-describe('computeRepromptTime', () => {
-  it('schedules 6 hours later when that stays within the same day and after 10:00', () => {
-    expect(computeRepromptTime(new Date(2026, 7, 22, 8, 0))).toEqual(new Date(2026, 7, 22, 14, 0));
-  });
-
-  it('drops the reprompt when it would cross midnight', () => {
-    expect(computeRepromptTime(new Date(2026, 7, 22, 19, 0))).toBeNull();
-  });
-
-  it('drops the reprompt when it would land before 10:00', () => {
-    expect(computeRepromptTime(new Date(2026, 7, 22, 3, 0))).toBeNull();
   });
 });
 

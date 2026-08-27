@@ -3,14 +3,12 @@ import { Platform } from 'react-native';
 import type { RoutineItemSchedule } from '@/features/dose-log/doseState';
 import { getNotificationsModule } from '@/lib/notifications-safe';
 
-export const DOSE_RESPONSE_CATEGORY = 'dose-response';
 export const DOSE_CHANNEL_ID = 'dose-reminders';
 
 /**
  * Android needs an explicit channel; there was none, so reminders landed in the system default
- * at default importance. That matters for the action buttons specifically — a notification that
- * isn't important enough to expand shows collapsed, and Yes/No/Skip only render on the expanded
- * form, so the buttons were effectively unreachable.
+ * at default importance, which shows them collapsed and low-priority. HIGH is what makes a dose
+ * reminder actually surface at the moment it's due rather than sitting quietly in the shade.
  *
  * `lockscreenVisibility: PRIVATE` is a product decision, not a default. "Did you take your
  * meds?" on a lockscreen is readable by anyone who picks up the phone, and hair loss is exactly
@@ -38,29 +36,6 @@ export async function requestNotificationPermissions(): Promise<boolean> {
   if (current.granted) return true;
   const requested = await Notifications.requestPermissionsAsync();
   return requested.granted;
-}
-
-/**
- * Registers the Yes/No/Skip action buttons. Idempotent — safe to call on every launch.
- *
- * **`opensAppToForeground: true` is deliberate, and was changed from `false`.** Answering
- * without opening the app is the nicer idea, but on Android it can't confirm anything: the
- * notification simply vanishes, and if the process was already killed the answer isn't applied
- * until the app is next opened. Tapping Yes and seeing nothing happen is indistinguishable from
- * a button that doesn't work — which is exactly how it got reported.
- *
- * Opening the app costs a moment and buys a guarantee: the handler always runs, and the dose is
- * visibly ticked off on Home. For something done once or twice a day, a reliable answer beats a
- * silent one.
- */
-export async function ensureDoseResponseCategory() {
-  const Notifications = getNotificationsModule();
-  if (!Notifications) return;
-  await Notifications.setNotificationCategoryAsync(DOSE_RESPONSE_CATEGORY, [
-    { identifier: 'yes', buttonTitle: 'Yes', options: { opensAppToForeground: true } },
-    { identifier: 'no', buttonTitle: 'No', options: { opensAppToForeground: true } },
-    { identifier: 'skip', buttonTitle: 'Skip', options: { opensAppToForeground: true } },
-  ]);
 }
 
 function parseTime(time: string): { hour: number; minute: number } {
@@ -111,9 +86,15 @@ export function buildBatchedReminders(items: RoutineItemSchedule[]): BatchedRemi
   );
 }
 
+/**
+ * The body is the whole message now — there are no action buttons, so tapping opens the app and
+ * the user logs each dose themselves. That's one more tap than a Yes button, and buys per-dose
+ * accuracy: reminders are batched by time, so a single Yes applied to *every* item due at once
+ * and couldn't express "took the Finasteride, skipped the Minoxidil".
+ */
 function batchBody(names: string[]): string {
-  if (names.length === 1) return `${names[0]} — log it in a tap.`;
-  return `${names.length} items due: ${names.join(', ')}`;
+  if (names.length === 1) return `${names[0]} — tap to log it.`;
+  return `${names.join(', ')} — tap to log them.`;
 }
 
 /**
@@ -124,7 +105,6 @@ export async function rescheduleRoutineReminders(items: RoutineItemSchedule[]) {
   const Notifications = getNotificationsModule();
   if (!Notifications) return;
 
-  await ensureDoseResponseCategory();
   await ensureDoseChannel();
   await cancelAllDoseReminders();
 
@@ -135,7 +115,6 @@ export async function rescheduleRoutineReminders(items: RoutineItemSchedule[]) {
       content: {
         title: 'Did you take your meds?',
         body: batchBody(batch.itemNames),
-        categoryIdentifier: DOSE_RESPONSE_CATEGORY,
         data: { itemIds: batch.itemIds, time: batch.time },
       },
       trigger: {
@@ -149,39 +128,14 @@ export async function rescheduleRoutineReminders(items: RoutineItemSchedule[]) {
   }
 }
 
-/** A "No" response's one-off follow-up (PRD §8: +6h, dropped outside 10:00-24:00 — see computeRepromptTime). */
-export async function scheduleReprompt(itemIds: string[], time: string, at: Date) {
-  const Notifications = getNotificationsModule();
-  if (!Notifications) return;
-
-  await ensureDoseResponseCategory();
-  await ensureDoseChannel();
-  const identifier = `reprompt-${time.replace(':', '')}`;
-  await Notifications.cancelScheduledNotificationAsync(identifier).catch(() => {});
-  await Notifications.scheduleNotificationAsync({
-    identifier,
-    content: {
-      title: 'Still there?',
-      body: "Did you take today's dose?",
-      categoryIdentifier: DOSE_RESPONSE_CATEGORY,
-      data: { itemIds, time },
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: at,
-      channelId: DOSE_CHANNEL_ID,
-    },
-  });
-}
-
-/** Cancels every dose reminder and reprompt, leaving the photo reminder alone. */
+/** Cancels every dose reminder, leaving the photo reminder alone. */
 export async function cancelAllDoseReminders() {
   const Notifications = getNotificationsModule();
   if (!Notifications) return;
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   await Promise.all(
     scheduled
-      .filter((n) => n.identifier.startsWith('reminder-') || n.identifier.startsWith('reprompt-'))
+      .filter((n) => n.identifier.startsWith('reminder-'))
       .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => {}))
   );
 }

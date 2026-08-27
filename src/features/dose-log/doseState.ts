@@ -36,21 +36,6 @@ export function computeEffectiveState(
   return isBefore(date, currentDate) ? 'missed' : 'pending';
 }
 
-/**
- * A "No" response gets a one-off re-prompt 6 hours later, but only if that lands within
- * the same calendar day and no earlier than 10:00 — never overnight (PRD §8).
- */
-export function computeRepromptTime(respondedAt: Date): Date | null {
-  const candidate = new Date(respondedAt.getTime() + 6 * 60 * 60 * 1000);
-  const sameDay =
-    candidate.getFullYear() === respondedAt.getFullYear() &&
-    candidate.getMonth() === respondedAt.getMonth() &&
-    candidate.getDate() === respondedAt.getDate();
-  if (!sameDay) return null;
-  if (candidate.getHours() < 10) return null;
-  return candidate;
-}
-
 export interface RoutineRange {
   id: string;
   startDate: DateString;

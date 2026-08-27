@@ -59,31 +59,6 @@ export async function logDose(
 }
 
 /** A "No" response: stays unlocked/pending (so it can still resolve to Taken) but records the response time for reprompt scheduling. */
-export async function recordDoseNoResponse(routineItemId: string, date: DateString, time: string) {
-  const existing = await db
-    .select()
-    .from(doseLogs)
-    .where(
-      and(eq(doseLogs.routineItemId, routineItemId), eq(doseLogs.date, date), eq(doseLogs.time, time))
-    );
-
-  const respondedAt = new Date().toISOString();
-
-  if (existing[0]) {
-    await db.update(doseLogs).set({ respondedAt }).where(eq(doseLogs.id, existing[0].id));
-  } else {
-    await db.insert(doseLogs).values({
-      id: randomUUID(),
-      routineItemId,
-      date,
-      time,
-      state: 'pending',
-      locked: false,
-      respondedAt,
-    });
-  }
-}
-
 /**
  * Walks every scheduled dose from `fromDate` through yesterday and persists `missed` for any
  * that never got a locked response — the "auto-mark Missed at end of day" from PRD §8,
