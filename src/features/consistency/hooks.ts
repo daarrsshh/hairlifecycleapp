@@ -23,7 +23,8 @@ import {
   type DayStatusResolver,
   type WeekDay,
 } from '@/features/consistency/streak';
-import { today } from '@/lib/date';
+import { computeTimeOfDayStats, computeWeeklyTrend, type TimeOfDayStat, type TrendWeek } from '@/features/consistency/trend';
+import { addDays, today } from '@/lib/date';
 
 export async function loadConsistencyContext() {
   const { routines, items, pauseWindows } = await loadDosingContext();
@@ -112,8 +113,11 @@ export interface ItemConsistencyRow {
 }
 
 export interface ConsistencyStats {
-  currentStreak: number;
   monthRatio: { completed: number; total: number };
+  /** Adherence week by week, oldest first — the direction, which a streak can't show. */
+  trend: TrendWeek[];
+  /** Which scheduled time gets missed most, worst-first. */
+  timeOfDay: TimeOfDayStat[];
   /** Per-item, over the calendar week so far — "LLLT: 3 of 3 this week". */
   itemsThisWeek: ItemConsistencyRow[];
   monthDayStatuses: Record<string, DayStatus>;
@@ -128,7 +132,6 @@ export function useConsistencyStats() {
       const ctx = await loadConsistencyContext();
       const [year, month] = ctx.currentDate.split('-').map(Number);
 
-      const currentStreak = computeCurrentStreak(ctx.currentDate, ctx.dayStatus, ctx.earliestStart);
       const monthRatio = computeMonthRatio(year, month, ctx.currentDate, ctx.dayStatus);
 
       // Same calendar week as Home's strip — both surfaces say "this week", so they must mean
@@ -154,6 +157,26 @@ export function useConsistencyStats() {
         ),
       }));
 
+      const trend = computeWeeklyTrend(ctx.currentDate, ctx.earliestStart, ctx.dayStatus);
+
+      // Time-of-day adherence over the trailing 8 weeks — the same window the trend covers, so
+      // the two describe the same stretch of history rather than quietly different ones.
+      const windowStart = ctx.earliestStart
+        ? maxDate(addDays(ctx.currentDate, -56), ctx.earliestStart)
+        : null;
+      const doses: { time: string; taken: boolean }[] = [];
+      if (windowStart) {
+        for (let d = windowStart; d <= ctx.currentDate; d = addDays(d, 1)) {
+          for (const dose of ctx.scheduledFor(d)) {
+            doses.push({
+              time: dose.time,
+              taken: ctx.effectiveStateFor(d, dose.itemId, dose.time) === 'taken',
+            });
+          }
+        }
+      }
+      const timeOfDay = computeTimeOfDayStats(doses);
+
       const daysInMonth = new Date(year, month, 0).getDate();
       const monthDayStatuses: Record<string, DayStatus> = {};
       for (let day = 1; day <= daysInMonth; day++) {
@@ -162,7 +185,12 @@ export function useConsistencyStats() {
         monthDayStatuses[date] = ctx.dayStatus(date);
       }
 
-      return { currentStreak, monthRatio, itemsThisWeek, monthDayStatuses, year, month };
+      return { monthRatio, trend, timeOfDay, itemsThisWeek, monthDayStatuses, year, month };
     },
   });
+}
+
+/** Later of two dates — keeps the stats window from reaching back before the first routine. */
+function maxDate(a: string, b: string): string {
+  return a > b ? a : b;
 }
