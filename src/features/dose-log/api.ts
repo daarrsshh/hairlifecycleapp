@@ -69,12 +69,19 @@ export async function reconcileMissedDoses(fromDate: DateString) {
   const { routines: allRoutines, items, pauseWindows } = await loadDosingContext();
   const allLogs = await db.select().from(doseLogs);
 
+  /*
+   * Indexed once rather than scanned per dose. This walks every day since the first routine
+   * started, on every cold start, awaited before the splash screen hides — so a linear `.find()`
+   * inside it is quadratic in history length: roughly 1.2 million comparisons after a year and
+   * 4.8 million after two, growing for as long as someone keeps using the app. The key is the
+   * same triple the `dose_logs_item_date_time` unique index uses.
+   */
+  const logsByKey = new Map(allLogs.map((l) => [`${l.routineItemId}|${l.date}|${l.time}`, l]));
+
   let cursor = fromDate;
   while (cursor < currentDate) {
     for (const dose of getScheduledDoses(cursor, allRoutines, pauseWindows, items)) {
-      const existing = allLogs.find(
-        (l) => l.routineItemId === dose.itemId && l.date === cursor && l.time === dose.time
-      );
+      const existing = logsByKey.get(`${dose.itemId}|${cursor}|${dose.time}`);
       if (!existing) {
         await db.insert(doseLogs).values({
           id: randomUUID(),
