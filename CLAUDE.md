@@ -8,7 +8,11 @@ This project targets **Expo SDK 57**, which changed significantly from prior ver
 
 ## What this app is
 
-A hair-regrowth treatment tracker: log each thing you take or do on its own schedule, keep an angle-matched photo timeline, and see consistency stats — jargon-free, non-punishing tone (never guilt-inducing copy, streaks freeze rather than reset during a pause). **v1 is fully local-first — no backend, no auth.** All data lives on-device in SQLite; a sync/auth layer may be layered on later, which is why local IDs are UUIDs shaped like they'd already work as remote primary keys.
+A hair-regrowth treatment tracker: log each thing you take or do on its own schedule, keep an angle-matched photo timeline, and see consistency stats — jargon-free, non-punishing tone (never guilt-inducing copy, streaks freeze rather than reset during a pause).
+
+**All user data is local.** Every routine, dose log, and photo lives on-device in SQLite and on the filesystem; nothing is uploaded. There *is* now a Supabase **anonymous identity** issued on first launch (see Auth below), but it holds no data — it exists so a later email upgrade doesn't force existing users through a signup wall. Local IDs are UUIDs shaped to work as remote primary keys whenever sync arrives.
+
+The plan beyond v1 is monetisation via a paid AI photo-comparison feature, which is what will eventually require real accounts and server-side photos. Treat "nothing leaves the device" as true today and as a claim that must be re-examined — in the app copy and the privacy policy — the moment that changes.
 
 `knowledge/` holds research that informs product decisions (the seeded treatment catalog, Learn content, milestone copy). It is **not** read at runtime — content there gets distilled into code by hand. See its README before adding to it.
 
