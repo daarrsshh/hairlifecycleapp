@@ -7,6 +7,7 @@ import { ActivityIndicator, StyleSheet, Text, useColorScheme } from 'react-nativ
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { AppErrorBoundary } from '@/components/app-error-boundary';
 import { db } from '@/db/client';
 import migrations from '@/db/migrations/migrations';
 import { NotificationSetup } from '@/features/dose-log/notification-setup';
@@ -14,6 +15,13 @@ import { useIconFont } from '@/hooks/use-icon-font';
 import { queryClient } from '@/lib/queryClient';
 
 SplashScreen.preventAutoHideAsync();
+
+/**
+ * expo-router renders a route's `ErrorBoundary` export in place of the crashed tree. Exported
+ * from the root layout, it covers everything below — see app-error-boundary for what it does
+ * and doesn't catch.
+ */
+export { AppErrorBoundary as ErrorBoundary };
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
