@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { db } from '@/db/client';
 import migrations from '@/db/migrations/migrations';
 import { DoseNotificationResponder } from '@/features/dose-log/notification-responder';
+import { useIconFont } from '@/hooks/use-icon-font';
 import { queryClient } from '@/lib/queryClient';
 
 SplashScreen.preventAutoHideAsync();
@@ -17,6 +18,8 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const { success, error } = useMigrations(db, migrations);
+  // Loaded here so it's registered before any SymbolView mounts — see use-icon-font.
+  const iconFontReady = useIconFont();
 
   const [bootStalled, setBootStalled] = useState(false);
 
@@ -65,7 +68,7 @@ export default function RootLayout() {
     );
   }
 
-  if (!success) {
+  if (!success || !iconFontReady) {
     // Until the grace period elapses the splash is still up, so render nothing behind it. Once
     // it's clear the boot has stalled, say so instead of leaving a blank screen.
     if (!bootStalled) return null;
