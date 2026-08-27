@@ -3,8 +3,8 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { useOnboardingDraft } from '@/features/onboarding/draft-store';
 import { createProfile, getProfile } from '@/features/onboarding/api';
+import { useOnboardingDraft } from '@/features/onboarding/draft-store';
 import { ensureAppSettings } from '@/features/onboarding/settings-api';
 import { savePhoto, recordPhotoSetCompleted, type PhotoAngle } from '@/features/photos/api';
 import { AngleCaptureFlow, CAPTURE_ANGLES, type CapturedPhotos } from '@/features/photos/components/angle-capture-flow';

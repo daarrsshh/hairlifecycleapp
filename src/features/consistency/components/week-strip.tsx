@@ -3,9 +3,9 @@ import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
+import type { WeekDay } from '@/features/consistency/streak';
 import type { DayStatus } from '@/features/dose-log/doseState';
 import { dayOfWeek } from '@/features/dose-log/doseState';
-import type { WeekDay } from '@/features/consistency/streak';
 import { useTheme } from '@/hooks/use-theme';
 
 const WEEKDAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];

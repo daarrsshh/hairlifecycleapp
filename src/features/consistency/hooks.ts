@@ -2,6 +2,16 @@ import { useQuery } from '@tanstack/react-query';
 
 import { db } from '@/db/client';
 import { doseLogs } from '@/db/schema';
+import {
+  computeCurrentStreak,
+  computeItemConsistency,
+  computeMonthRatio,
+  computeRangeRatio,
+  computeCalendarWeek,
+  startOfWeek,
+  type DayStatusResolver,
+  type WeekDay,
+} from '@/features/consistency/streak';
 import { loadDosingContext } from '@/features/dose-log/api';
 import {
   computeEffectiveState,
@@ -13,16 +23,6 @@ import {
   type RoutineItemType,
   type ScheduledDose,
 } from '@/features/dose-log/doseState';
-import {
-  computeCurrentStreak,
-  computeItemConsistency,
-  computeMonthRatio,
-  computeRangeRatio,
-  computeCalendarWeek,
-  startOfWeek,
-  type DayStatusResolver,
-  type WeekDay,
-} from '@/features/consistency/streak';
 import { today } from '@/lib/date';
 
 export async function loadConsistencyContext() {

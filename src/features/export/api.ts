@@ -2,8 +2,8 @@ import { Directory, File, Paths } from 'expo-file-system';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
-import { computeBestStreak, computeCurrentStreak, computeRangeRatio } from '@/features/consistency/streak';
 import { loadConsistencyContext } from '@/features/consistency/hooks';
+import { computeBestStreak, computeCurrentStreak, computeRangeRatio } from '@/features/consistency/streak';
 import { buildExportHtml, type ExportPhotoGroup } from '@/features/export/build-pdf';
 import { resolveExportRange, type ExportRangeOption } from '@/features/export/resolve-range';
 import { getAllPhotos } from '@/features/photos/api';

@@ -2,8 +2,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
-import type { DayStatus } from '@/features/dose-log/doseState';
 import { buildMonthGrid, describeMonth, weekdayInitials } from '@/features/consistency/month-grid';
+import type { DayStatus } from '@/features/dose-log/doseState';
 import { useTheme } from '@/hooks/use-theme';
 
 const WEEKDAY_INITIALS = weekdayInitials(); // Monday-first, matching Home's week strip

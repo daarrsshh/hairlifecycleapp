@@ -6,10 +6,10 @@ import { Pressable, ScrollView, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { buildTimeline, type TimelineEvent } from '@/features/timeline/build-timeline';
-import { describeRoutine } from '@/features/routine/describe';
-import { getAllPauseWindows, getAllRoutineItems, getAllRoutines } from '@/features/routine/api';
 import { getAllPhotos } from '@/features/photos/api';
+import { getAllPauseWindows, getAllRoutineItems, getAllRoutines } from '@/features/routine/api';
+import { describeRoutine } from '@/features/routine/describe';
+import { buildTimeline, type TimelineEvent } from '@/features/timeline/build-timeline';
 
 const ANGLE_LABEL: Record<string, string> = {
   crown: 'Crown',

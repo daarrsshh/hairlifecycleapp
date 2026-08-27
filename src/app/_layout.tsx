@@ -4,8 +4,8 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, useColorScheme } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppErrorBoundary } from '@/components/app-error-boundary';
 import { db } from '@/db/client';

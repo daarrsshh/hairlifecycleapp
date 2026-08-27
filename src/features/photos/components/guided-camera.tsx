@@ -1,12 +1,12 @@
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
-import { Icon } from '@/components/icon';
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Icon } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { GuidedCameraOverlay } from '@/features/photos/components/guided-camera-overlay';
 import type { PhotoAngle } from '@/features/photos/api';
+import { GuidedCameraOverlay } from '@/features/photos/components/guided-camera-overlay';
 
 export function GuidedCamera({
   angle,

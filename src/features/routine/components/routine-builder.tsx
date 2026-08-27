@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
-import { Icon, type IconName } from '@/components/icon';
 
+import { Icon, type IconName } from '@/components/icon';
 import { LinkButton } from '@/components/link-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';

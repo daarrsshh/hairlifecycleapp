@@ -1,8 +1,8 @@
 import { Tabs } from 'expo-router';
-import { Icon } from '@/components/icon';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { Icon } from '@/components/icon';
 import { ListDivider, ListGroup, ListRow } from '@/components/list-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';

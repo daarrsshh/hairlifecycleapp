@@ -1,17 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Tabs } from 'expo-router';
-import { Icon } from '@/components/icon';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { Icon } from '@/components/icon';
 import { ListDivider, ListGroup, ListRow } from '@/components/list-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { getAppSettings, setNotificationsEnabled } from '@/features/onboarding/settings-api';
-import { ITEM_TYPE_LABEL } from '@/features/routine/catalog';
-import { ITEM_TYPE_ICON } from '@/features/routine/components/routine-builder';
-import { describeRoutine, describeSchedule } from '@/features/routine/describe';
-import { useRoutineDraft } from '@/features/routine/draft-store';
 import {
   getActiveRoutine,
   getAllRoutineItems,
@@ -19,6 +15,10 @@ import {
   pauseRoutine,
   resumeRoutine,
 } from '@/features/routine/api';
+import { ITEM_TYPE_LABEL } from '@/features/routine/catalog';
+import { ITEM_TYPE_ICON } from '@/features/routine/components/routine-builder';
+import { describeRoutine, describeSchedule } from '@/features/routine/describe';
+import { useRoutineDraft } from '@/features/routine/draft-store';
 import { useTheme } from '@/hooks/use-theme';
 import { daysBetween, today } from '@/lib/date';
 import { cancelAllDoseReminders, rescheduleRoutineReminders } from '@/lib/notifications';

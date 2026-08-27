@@ -7,10 +7,10 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import type { RoutineItemType } from '@/features/dose-log/doseState';
 import { ITEM_TYPE_LABEL, findCatalogEntry, searchCatalog } from '@/features/routine/catalog';
-import { describeSchedule } from '@/features/routine/describe';
-import { useRoutineDraft } from '@/features/routine/draft-store';
 import { TimesEditor } from '@/features/routine/components/times-editor';
 import { WeekdayPicker } from '@/features/routine/components/weekday-picker';
+import { describeSchedule } from '@/features/routine/describe';
+import { useRoutineDraft } from '@/features/routine/draft-store';
 import { useTheme } from '@/hooks/use-theme';
 
 const TYPES: RoutineItemType[] = ['oral', 'topical', 'device'];

@@ -29,7 +29,6 @@ npm test                # jest (jest-expo preset)
 npm test -- streak      # run one suite by filename substring
 npx tsc --noEmit         # type-check the project
 npm run db:generate      # regenerate src/db/migrations/ after editing src/db/schema.ts
-npm run reset-project     # moves current app/ to app-example/ and creates a blank app/ (irreversible without git)
 ```
 
 **To test the app as a first-time user**, don't delete the database file — use the `__DEV__`-only "Reset all app data" action at the bottom of the Me tab. `features/dev/reset-data.ts`'s `resetAllData()` clears DB rows child-to-parent, deletes the photo *files* under `Paths.document/progress-photos/`, and cancels every scheduled OS notification; the caller then clears the React Query cache before `router.replace('/')` — without that, the gate re-reads a cached profile and lands back on the tabs instead of onboarding. The `__DEV__` guard keeps it out of production builds.
@@ -173,8 +172,8 @@ Lessons that apply to anything added here:
 - `resolve-range.ts` turns a range option into concrete dates; `build-pdf.ts` renders HTML for `expo-print` (image `src`s are local `file://` paths — fine in `expo-print`'s native WebView, would need base64 in a browser); `api.ts` glues them together and hands off via `expo-sharing`, reusing `loadConsistencyContext`.
 
 ### Theming & UI primitives
-- `Colors`, `Fonts`, `Spacing` live in `src/constants/theme.ts` — use these tokens rather than hardcoding in `StyleSheet.create`. (`BottomTabInset`/`MaxContentWidth` are leftovers from the starter template and currently unused.)
-- `useTheme()` returns the resolved `Colors[light|dark]`; `ThemedText`/`ThemedView` read from it, so screens shouldn't branch on color scheme manually.
+- `Colors`, `Fonts`, `Spacing` live in `src/constants/theme.ts` — use these tokens rather than hardcoding in `StyleSheet.create`. 
+- `useTheme()` returns the resolved `Colors[light|dark]`; `ThemedText`/`ThemedView` read from it, so screens shouldn't branch on color scheme manually. It treats anything other than an explicit `'dark'` as light — including **`null`**, which is what `useColorScheme` returns when the OS reports no preference. The old guard checked for `'unspecified'`, a value it never returns, so a `null` would have handed every caller `undefined` and crashed the first component to read `theme.primary`.
 - **The palette is deep teal on warm paper neutrals, with moss green for a taken dose** — it replaced the Expo starter's system-blue-on-cold-grey. Three constraints hold it together, and each is load-bearing rather than taste:
   - Neutrals are **warm** (red/yellow bias). This is a bathroom-shelf app opened for thirty seconds by someone quietly anxious about their appearance; warm paper reads as a journal, cold grey reads as a form.
   - `primary` sits **~81° of hue from `taken`** (187° vs 106°). An unfilled dose circle is `primary` and a filled one is `taken`, and they sit adjacent on every card — neighbouring hues would make the app's core interaction ambiguous. Don't repalette one without checking the other.

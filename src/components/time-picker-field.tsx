@@ -4,7 +4,6 @@ import { Platform, Pressable, type StyleProp, type ViewStyle } from 'react-nativ
 
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
-
 import type { ThemeColor } from '@/constants/theme';
 
 export function timeStringToDate(time: string): Date {

@@ -1,9 +1,9 @@
 import { Image } from 'expo-image';
-import { Icon } from '@/components/icon';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { Icon } from '@/components/icon';
 import { usePhotoZoom } from '@/features/photos/components/use-photo-zoom';
 
 const KNOB_SIZE = 40;

@@ -4,9 +4,9 @@ import { Directory, File, Paths } from 'expo-file-system';
 
 import { db } from '@/db/client';
 import { photos } from '@/db/schema';
-import { getActiveRoutine, getAllRoutines } from '@/features/routine/api';
-import { computeNextPhotoReminderDate } from '@/features/photos/photo-reminder';
 import { getAppSettings, setLastPhotoSetDate } from '@/features/onboarding/settings-api';
+import { computeNextPhotoReminderDate } from '@/features/photos/photo-reminder';
+import { getActiveRoutine, getAllRoutines } from '@/features/routine/api';
 import { dateStringAt, today, type DateString } from '@/lib/date';
 import { schedulePhotoReminder } from '@/lib/notifications';
 

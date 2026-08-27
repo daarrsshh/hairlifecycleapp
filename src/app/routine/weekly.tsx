@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
-import { Icon } from '@/components/icon';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { Icon } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { ITEM_TYPE_ICON } from '@/features/routine/components/routine-builder';
 import { getActiveRoutine, getItemsForRoutine } from '@/features/routine/api';
+import { ITEM_TYPE_ICON } from '@/features/routine/components/routine-builder';
 import { formatTime } from '@/features/routine/describe';
 import { useTheme } from '@/hooks/use-theme';
 

@@ -1,6 +1,6 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';

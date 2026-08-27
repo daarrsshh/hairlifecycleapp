@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Tabs } from 'expo-router';
-import { Icon } from '@/components/icon';
 import { ScrollView, StyleSheet } from 'react-native';
 
+import { Icon } from '@/components/icon';
 import { LinkButton } from '@/components/link-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';

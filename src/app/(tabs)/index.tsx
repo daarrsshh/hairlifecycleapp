@@ -1,26 +1,26 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Tabs } from 'expo-router';
-import { Icon } from '@/components/icon';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
+import { Icon } from '@/components/icon';
 import { LinkButton } from '@/components/link-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { useConsistencyStats, useWeeklyProgress } from '@/features/consistency/hooks';
 import { ConsistencyHeatmap } from '@/features/consistency/components/consistency-heatmap';
 import { DayDetailCard } from '@/features/consistency/components/day-detail-card';
 import { ItemConsistencyList } from '@/features/consistency/components/item-consistency-list';
 import { WeekStrip } from '@/features/consistency/components/week-strip';
+import { useConsistencyStats, useWeeklyProgress } from '@/features/consistency/hooks';
 import { DoseRow } from '@/features/dose-log/components/dose-row';
 import { useLogDose, useTodayDoses } from '@/features/dose-log/hooks';
-import { getAppSettings } from '@/features/onboarding/settings-api';
 import { getActiveMilestone } from '@/features/learn/milestones';
+import { getAppSettings } from '@/features/onboarding/settings-api';
 import { isPhotoReminderDue } from '@/features/photos/photo-reminder';
-import { ITEM_TYPE_ICON } from '@/features/routine/components/routine-builder';
 import { resumeRoutine } from '@/features/routine/api';
+import { ITEM_TYPE_ICON } from '@/features/routine/components/routine-builder';
 import { useTheme } from '@/hooks/use-theme';
 import { today } from '@/lib/date';
 
