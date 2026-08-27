@@ -48,7 +48,7 @@ function reminderId(weekday: number, time: string) {
   return `reminder-${weekday}-${time.replace(':', '')}`;
 }
 
-interface BatchedReminder {
+export interface BatchedReminder {
   weekday: number; // 1 = Sunday … 7 = Saturday (expo-notifications WEEKLY convention)
   time: string;
   itemIds: string[];
@@ -98,6 +98,46 @@ function batchBody(names: string[]): string {
 }
 
 /**
+ * iOS hard-caps pending local notifications at 64 and silently drops the rest; Android throttles
+ * well before its own limit. 60 leaves room for the photo reminder and some headroom.
+ */
+export const MAX_SCHEDULED_REMINDERS = 60;
+
+/**
+ * Bounds the schedule, keeping **whole times** rather than truncating the sorted list.
+ *
+ * Batches are ordered by weekday then time, so cutting the tail would drop later weekdays
+ * entirely — Monday would keep every reminder while Saturday and Sunday lost all of them.
+ * Dropping complete times instead keeps coverage even across the week: you're either reminded
+ * at 8am on every day it applies, or not at all for that time.
+ *
+ * Reaching this needs roughly ten distinct times of day in one routine, which is not a real
+ * regimen — the cap exists so an unusual routine degrades predictably instead of having its
+ * reminders silently discarded by the OS.
+ */
+export function capReminders(
+  batches: BatchedReminder[],
+  max = MAX_SCHEDULED_REMINDERS
+): BatchedReminder[] {
+  if (batches.length <= max) return batches;
+
+  const keptTimes = new Set<string>();
+  let count = 0;
+  for (const time of [...new Set(batches.map((b) => b.time))].sort()) {
+    const forTime = batches.filter((b) => b.time === time).length;
+    if (count + forTime > max) break;
+    keptTimes.add(time);
+    count += forTime;
+  }
+
+  console.warn(
+    `[notifications] routine needs ${batches.length} reminders, over the ${max} limit — ` +
+      `scheduling ${count} and dropping times after ${[...keptTimes].sort().pop()}`
+  );
+  return batches.filter((b) => keptTimes.has(b.time));
+}
+
+/**
  * Replaces all scheduled dose reminders with ones derived from the current routine. Cheap and
  * idempotent — call it whenever the routine changes.
  */
@@ -108,7 +148,7 @@ export async function rescheduleRoutineReminders(items: RoutineItemSchedule[]) {
   await ensureDoseChannel();
   await cancelAllDoseReminders();
 
-  for (const batch of buildBatchedReminders(items)) {
+  for (const batch of capReminders(buildBatchedReminders(items))) {
     const { hour, minute } = parseTime(batch.time);
     await Notifications.scheduleNotificationAsync({
       identifier: reminderId(batch.weekday, batch.time),
