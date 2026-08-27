@@ -21,8 +21,13 @@ export function GuidedCamera({
 }) {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
-  // Hairline and temple shots are usually easier facing yourself; crown usually isn't.
-  const [facing, setFacing] = useState<CameraType>('back');
+  /*
+   * Front camera by default. Three of the four angles — hairline and both temples — are shots
+   * of your own face taken alone, so the back camera meant every capture started by flipping.
+   * Crown is the awkward exception either way: you can't see the top of your own head on any
+   * camera, so it's usually a mirror or another person. The flip control stays one tap away.
+   */
+  const [facing, setFacing] = useState<CameraType>('front');
 
   if (!permission) return null;
 
