@@ -12,20 +12,24 @@ import { useTheme } from '@/hooks/use-theme';
  *
  * Everything else on this screen tells you *how* you're doing; this one suggests what to change,
  * because the fix is concrete: move the reminder, or move the dose. Ordered worst-first so the
- * problem time is the first thing read, and only shown when there's more than one time to
- * compare — a single row is a stat, not an insight.
+ * problem time is the first thing read.
+ *
+ * It renders for a single scheduled time too. Comparing times is the *best* thing it does, not
+ * the only useful one — and a panel that silently disappears for anyone on a once-daily routine
+ * makes the screen look broken rather than considered. What changes with one time is the
+ * headline: a comparison needs something to compare.
  */
 export function TimeOfDayChart({ stats }: { stats: TimeOfDayStat[] }) {
   const theme = useTheme();
 
-  if (stats.length < 2) return null;
+  if (stats.length === 0) return null;
 
   const worst = stats[0];
   const best = stats[stats.length - 1];
   const worstRate = worst.total === 0 ? 1 : worst.taken / worst.total;
   const bestRate = best.total === 0 ? 1 : best.taken / best.total;
-  // Only claim a pattern when the gap is big enough to act on.
-  const notable = bestRate - worstRate >= 0.2;
+  // Only claim a pattern when there's a comparison to make and the gap is big enough to act on.
+  const notable = stats.length >= 2 && bestRate - worstRate >= 0.2;
 
   return (
     <ThemedView type="backgroundElement" style={styles.card}>
@@ -33,7 +37,9 @@ export function TimeOfDayChart({ stats }: { stats: TimeOfDayStat[] }) {
       <ThemedText themeColor="textSecondary" type="small">
         {notable
           ? `Your ${formatTime(worst.time)} dose is the one you miss most.`
-          : 'Fairly even across the day.'}
+          : stats.length === 1
+            ? `Everything is scheduled for ${formatTime(worst.time)}.`
+            : 'Fairly even across the day.'}
       </ThemedText>
 
       {stats.map((stat) => {

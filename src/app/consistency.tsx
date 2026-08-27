@@ -38,6 +38,18 @@ export default function ConsistencyScreen() {
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ headerShown: true, title: 'Consistency' }} />
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Every panel here is conditional on having data, so without this a brand-new user
+            sees an almost-empty screen and reasonably concludes it's broken. */}
+        {data.trend.length === 0 && data.timeOfDay.length === 0 && data.itemsThisWeek.length === 0 ? (
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <ThemedText type="smallBold">Nothing to show yet</ThemedText>
+            <ThemedText themeColor="textSecondary" type="small">
+              Once you&apos;ve logged a few doses, this is where you&apos;ll see how you&apos;re
+              doing week to week and which doses you tend to miss.
+            </ThemedText>
+          </ThemedView>
+        ) : null}
+
         <WeeklyTrendChart weeks={data.trend} />
         <TimeOfDayChart stats={data.timeOfDay} />
 
