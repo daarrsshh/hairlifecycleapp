@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Tabs } from 'expo-router';
-import { SymbolView, type SymbolViewProps } from 'expo-symbols';
+import { SymbolView } from 'expo-symbols';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { LinkButton } from '@/components/link-button';
+import { ListDivider, ListGroup, ListRow } from '@/components/list-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -147,22 +147,22 @@ export default function RoutineScreen() {
         <ThemedText type="caption" themeColor="textSecondary" style={styles.sectionLabel}>
           More
         </ThemedText>
-        <ThemedView type="backgroundElement" style={styles.linkList}>
-          <ActionRow
+        <ListGroup>
+          <ListRow
             href="/routine/weekly"
             icon={{ ios: 'calendar', android: 'calendar_month', web: 'calendar_month' }}
             title="Your week"
             subtitle="Everything scheduled, day by day"
           />
-          <Divider />
-          <ActionRow
+          <ListDivider />
+          <ListRow
             href="/timeline"
             icon={{ ios: 'clock.arrow.circlepath', android: 'history', web: 'history' }}
             title="Timeline"
             subtitle="Routine changes, pauses and photo dates"
           />
-          <Divider />
-          <ActionRow
+          <ListDivider />
+          <ListRow
             href="/routine/new"
             onPress={() => useRoutineDraft.getState().reset()}
             icon={{ ios: 'plus.circle', android: 'add_circle', web: 'add_circle' }}
@@ -173,49 +173,10 @@ export default function RoutineScreen() {
                 : 'Add what you take and when'
             }
           />
-        </ThemedView>
+        </ListGroup>
       </ScrollView>
     </ThemedView>
   );
-}
-
-function ActionRow({
-  href,
-  icon,
-  title,
-  subtitle,
-  onPress,
-}: {
-  /* Derived from LinkButton rather than typed as `string`: expo-router's typed routes only
-     accept known route literals, so a widened string fails to compile. */
-  href: React.ComponentProps<typeof LinkButton>['href'];
-  icon: SymbolViewProps['name'];
-  title: string;
-  subtitle: string;
-  onPress?: () => void;
-}) {
-  const theme = useTheme();
-  return (
-    <LinkButton href={href} onPress={onPress} style={styles.actionRow}>
-      <SymbolView name={icon} size={20} tintColor={theme.primary} />
-      <View style={styles.actionText}>
-        <ThemedText type="smallBold">{title}</ThemedText>
-        <ThemedText themeColor="textSecondary" type="caption">
-          {subtitle}
-        </ThemedText>
-      </View>
-      <SymbolView
-        name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
-        size={16}
-        tintColor={theme.textSecondary}
-      />
-    </LinkButton>
-  );
-}
-
-function Divider() {
-  const theme = useTheme();
-  return <View style={[styles.divider, { backgroundColor: theme.border }]} />;
 }
 
 function EmptyRoutine() {
@@ -258,15 +219,4 @@ const styles = StyleSheet.create({
   },
   itemIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   itemText: { flex: 1, gap: Spacing.half },
-
-  linkList: { borderRadius: Spacing.three, overflow: 'hidden' },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
-  },
-  actionText: { flex: 1, gap: Spacing.half },
-  divider: { height: StyleSheet.hairlineWidth, marginLeft: Spacing.six },
 });

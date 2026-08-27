@@ -1,9 +1,9 @@
 import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
-import { LinkButton } from '@/components/link-button';
+import { ListDivider, ListGroup, ListRow } from '@/components/list-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -32,50 +32,69 @@ export default function LearnScreen() {
           ),
         }}
       />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ThemedText type="subtitle">Learn</ThemedText>
 
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search"
-          placeholderTextColor={theme.textSecondary}
-          style={[styles.search, { color: theme.text, borderColor: theme.border }]}
-        />
+        <View style={[styles.search, { borderColor: theme.border }]}>
+          <SymbolView
+            name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
+            size={18}
+            tintColor={theme.textSecondary}
+          />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search articles and questions"
+            placeholderTextColor={theme.textSecondary}
+            style={[styles.searchInput, { color: theme.text }]}
+          />
+          {searching ? (
+            <Pressable onPress={() => setQuery('')} hitSlop={10} accessibilityLabel="Clear search">
+              <SymbolView
+                name={{ ios: 'xmark.circle.fill', android: 'cancel', web: 'cancel' }}
+                size={18}
+                tintColor={theme.textSecondary}
+              />
+            </Pressable>
+          ) : null}
+        </View>
 
         {searching ? (
-          <SearchResults articleIds={results.articles.map((a) => a.id)} faqIds={results.faq.map((f) => f.id)} />
+          <SearchResults
+            articleIds={results.articles.map((a) => a.id)}
+            faqIds={results.faq.map((f) => f.id)}
+          />
         ) : (
           <>
-            {CATEGORIES.map((category) => (
-              <ThemedView key={category} style={styles.section}>
-                <ThemedText type="caption" themeColor="textSecondary" style={styles.sectionLabel}>
-                  {category}
-                </ThemedText>
-                {ARTICLES.filter((a) => a.category === category).map((article) => (
-                  <LinkButton
-                    key={article.id}
-                    href={`/learn/${article.id}`}
-                    style={[styles.row, { borderColor: theme.border }]}>
-                    <ThemedText>{article.title}</ThemedText>
-                  </LinkButton>
-                ))}
-              </ThemedView>
-            ))}
+            {CATEGORIES.map((category) => {
+              const inCategory = ARTICLES.filter((a) => a.category === category);
+              if (inCategory.length === 0) return null;
+              return (
+                <View key={category} style={styles.section}>
+                  <SectionLabel>{category}</SectionLabel>
+                  <ListGroup>
+                    {inCategory.map((article, i) => (
+                      <View key={article.id}>
+                        {i > 0 ? <ListDivider /> : null}
+                        <ListRow href={`/learn/${article.id}`} title={article.title} />
+                      </View>
+                    ))}
+                  </ListGroup>
+                </View>
+              );
+            })}
 
-            <ThemedView style={styles.section}>
-              <ThemedText type="caption" themeColor="textSecondary" style={styles.sectionLabel}>
-                FAQ
-              </ThemedText>
-              {FAQ.map((entry) => (
-                <ThemedView key={entry.id} type="backgroundElement" style={styles.faqCard}>
-                  <ThemedText type="smallBold">{entry.question}</ThemedText>
-                  <ThemedText themeColor="textSecondary" type="small">
-                    {entry.answer}
-                  </ThemedText>
-                </ThemedView>
-              ))}
-            </ThemedView>
+            <View style={styles.section}>
+              <SectionLabel>Common questions</SectionLabel>
+              <ListGroup>
+                {FAQ.map((entry, i) => (
+                  <View key={entry.id}>
+                    {i > 0 ? <ListDivider /> : null}
+                    <FaqRow question={entry.question} answer={entry.answer} />
+                  </View>
+                ))}
+              </ListGroup>
+            </View>
           </>
         )}
       </ScrollView>
@@ -83,54 +102,125 @@ export default function LearnScreen() {
   );
 }
 
-function SearchResults({ articleIds, faqIds }: { articleIds: string[]; faqIds: string[] }) {
+/**
+ * FAQ answers open in place rather than pushing a screen.
+ *
+ * They're two or three sentences — short enough that a navigation round trip costs more than it
+ * gives, and short enough that reading several in a row is the normal case. Articles still push,
+ * because those are a longer read.
+ */
+function FaqRow({ question, answer }: { question: string; answer: string }) {
   const theme = useTheme();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Pressable onPress={() => setOpen((v) => !v)} style={styles.faqRow}>
+      <View style={styles.faqHeader}>
+        <ThemedText type="smallBold" style={styles.faqQuestion}>
+          {question}
+        </ThemedText>
+        <SymbolView
+          name={{ ios: 'chevron.down', android: 'expand_more', web: 'expand_more' }}
+          size={16}
+          tintColor={theme.textSecondary}
+          style={open ? styles.chevronOpen : undefined}
+        />
+      </View>
+      {open ? (
+        <ThemedText themeColor="textSecondary" type="small" style={styles.faqAnswer}>
+          {answer}
+        </ThemedText>
+      ) : null}
+    </Pressable>
+  );
+}
+
+function SearchResults({ articleIds, faqIds }: { articleIds: string[]; faqIds: string[] }) {
   const articles = ARTICLES.filter((a) => articleIds.includes(a.id));
   const faq = FAQ.filter((f) => faqIds.includes(f.id));
 
   if (articles.length === 0 && faq.length === 0) {
-    return <ThemedText themeColor="textSecondary">No results.</ThemedText>;
+    return (
+      <ThemedView type="backgroundElement" style={styles.empty}>
+        <ThemedText type="smallBold">Nothing matched</ThemedText>
+        <ThemedText themeColor="textSecondary" type="small">
+          Try a shorter word — &ldquo;shedding&rdquo; or &ldquo;minoxidil&rdquo; rather than a
+          whole question.
+        </ThemedText>
+      </ThemedView>
+    );
   }
 
   return (
-    <ThemedView style={styles.section}>
-      {articles.map((article) => (
-        <LinkButton
-          key={article.id}
-          href={`/learn/${article.id}`}
-          style={[styles.row, { borderColor: theme.border }]}>
-          <ThemedText>{article.title}</ThemedText>
-          <ThemedText themeColor="textSecondary" type="small">
-            {article.category}
-          </ThemedText>
-        </LinkButton>
-      ))}
-      {faq.map((entry) => (
-        <ThemedView key={entry.id} type="backgroundElement" style={styles.faqCard}>
-          <ThemedText type="smallBold">{entry.question}</ThemedText>
-          <ThemedText themeColor="textSecondary" type="small">
-            {entry.answer}
-          </ThemedText>
-        </ThemedView>
-      ))}
-    </ThemedView>
+    <>
+      {articles.length > 0 ? (
+        <View style={styles.section}>
+          <SectionLabel>
+            {articles.length} {articles.length === 1 ? 'article' : 'articles'}
+          </SectionLabel>
+          <ListGroup>
+            {articles.map((article, i) => (
+              <View key={article.id}>
+                {i > 0 ? <ListDivider /> : null}
+                <ListRow
+                  href={`/learn/${article.id}`}
+                  title={article.title}
+                  subtitle={article.category}
+                />
+              </View>
+            ))}
+          </ListGroup>
+        </View>
+      ) : null}
+
+      {faq.length > 0 ? (
+        <View style={styles.section}>
+          <SectionLabel>
+            {faq.length} {faq.length === 1 ? 'question' : 'questions'}
+          </SectionLabel>
+          <ListGroup>
+            {faq.map((entry, i) => (
+              <View key={entry.id}>
+                {i > 0 ? <ListDivider /> : null}
+                <FaqRow question={entry.question} answer={entry.answer} />
+              </View>
+            ))}
+          </ListGroup>
+        </View>
+      ) : null}
+    </>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <ThemedText type="caption" themeColor="textSecondary" style={styles.sectionLabel}>
+      {children}
+    </ThemedText>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: Spacing.four, gap: Spacing.three },
+  content: { padding: Spacing.four, gap: Spacing.three, paddingBottom: Spacing.five },
+  section: { gap: Spacing.two },
+  sectionLabel: { textTransform: 'uppercase', letterSpacing: 0.8 },
+
   search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
     borderWidth: 1,
     borderRadius: Spacing.three,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 16,
   },
-  section: { gap: Spacing.two },
-  /* A quiet label above the list, not a competing headline — the article titles are what you
-     came to read, so the category that groups them has to sit below them in the hierarchy. */
-  sectionLabel: { textTransform: 'uppercase', letterSpacing: 0.8 },
-  row: { paddingVertical: Spacing.three, borderBottomWidth: StyleSheet.hairlineWidth, gap: Spacing.half },
-  faqCard: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.one },
+  searchInput: { flex: 1, fontSize: 16, paddingVertical: Spacing.two },
+
+  faqRow: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.three, gap: Spacing.two },
+  faqHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  faqQuestion: { flex: 1 },
+  chevronOpen: { transform: [{ rotate: '180deg' }] },
+  faqAnswer: { paddingRight: Spacing.four },
+
+  empty: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.one },
 });
