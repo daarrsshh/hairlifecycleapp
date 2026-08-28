@@ -10,7 +10,6 @@ import { Spacing } from '@/constants/theme';
 import { getAppSettings, setNotificationsEnabled } from '@/features/onboarding/settings-api';
 import {
   getActiveRoutine,
-  getAllRoutineItems,
   getItemsForRoutine,
   pauseRoutine,
   resumeRoutine,
@@ -21,7 +20,7 @@ import { describeRoutine, describeSchedule } from '@/features/routine/describe';
 import { useRoutineDraft } from '@/features/routine/draft-store';
 import { useTheme } from '@/hooks/use-theme';
 import { daysBetween, today } from '@/lib/date';
-import { cancelAllDoseReminders, rescheduleRoutineReminders } from '@/lib/notifications';
+import { syncRoutineReminders } from '@/features/routine/reminders';
 
 export default function RoutineScreen() {
   const theme = useTheme();
@@ -47,8 +46,7 @@ export default function RoutineScreen() {
     if (!settings) return;
     const next = !settings.notificationsEnabled;
     await setNotificationsEnabled(next);
-    if (next) await rescheduleRoutineReminders(await getAllRoutineItems());
-    else await cancelAllDoseReminders();
+    await syncRoutineReminders();
     queryClient.invalidateQueries({ queryKey: ['settings'] });
   }
 
@@ -56,6 +54,9 @@ export default function RoutineScreen() {
     if (!routine) return;
     if (paused) await resumeRoutine(routine.id);
     else await pauseRoutine(routine.id, null);
+    // Pausing must silence the OS too — Home going quiet while notifications kept firing was
+    // the app nagging someone who had explicitly asked it to stop.
+    await syncRoutineReminders();
     queryClient.invalidateQueries();
   }
 

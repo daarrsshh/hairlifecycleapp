@@ -8,10 +8,11 @@ import { useOnboardingDraft } from '@/features/onboarding/draft-store';
 import { ensureAppSettings } from '@/features/onboarding/settings-api';
 import { savePhoto, recordPhotoSetCompleted, type PhotoAngle } from '@/features/photos/api';
 import { AngleCaptureFlow, CAPTURE_ANGLES, type CapturedPhotos } from '@/features/photos/components/angle-capture-flow';
-import { getActiveRoutine, getAllRoutineItems, startRoutine } from '@/features/routine/api';
+import { getActiveRoutine, startRoutine } from '@/features/routine/api';
 import { useRoutineDraft } from '@/features/routine/draft-store';
 import { useAsyncAction } from '@/hooks/use-async-action';
-import { rescheduleRoutineReminders, requestNotificationPermissions } from '@/lib/notifications';
+import { syncRoutineReminders } from '@/features/routine/reminders';
+import { requestNotificationPermissions } from '@/lib/notifications';
 
 export default function BaselinePhotosScreen() {
   const draft = useOnboardingDraft();
@@ -45,7 +46,7 @@ export default function BaselinePhotosScreen() {
 
       const granted = await requestNotificationPermissions();
       if (granted) {
-        await rescheduleRoutineReminders(await getAllRoutineItems());
+        await syncRoutineReminders();
       }
 
       const entries = Object.entries(captured) as [PhotoAngle, string][];

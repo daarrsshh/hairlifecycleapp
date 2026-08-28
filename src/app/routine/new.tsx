@@ -8,7 +8,6 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import {
   getActiveRoutine,
-  getAllRoutineItems,
   getItemsForRoutine,
   startRoutine,
 } from '@/features/routine/api';
@@ -18,7 +17,7 @@ import { useRoutineDraft } from '@/features/routine/draft-store';
 import { useAsyncAction } from '@/hooks/use-async-action';
 import { useTheme } from '@/hooks/use-theme';
 import { today } from '@/lib/date';
-import { rescheduleRoutineReminders } from '@/lib/notifications';
+import { syncRoutineReminders } from '@/features/routine/reminders';
 
 /**
  * "Start new routine" — builds a fresh routine and swaps it in, ending the current one.
@@ -70,7 +69,7 @@ export default function NewRoutineScreen() {
   async function confirm() {
     await run(async () => {
       await startRoutine({ items: draft.items });
-      await rescheduleRoutineReminders(await getAllRoutineItems());
+      await syncRoutineReminders();
       draft.reset();
       queryClient.invalidateQueries();
       router.replace('/(tabs)/routine');
