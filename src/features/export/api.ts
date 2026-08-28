@@ -124,7 +124,7 @@ export async function generateAndShareExport(options: {
   const exportsDir = getExportsDirectory();
   clearPreviousExports(exportsDir);
   // A real filename, not expo-print's random one — this is a document people hand to a doctor.
-  const target = new File(exportsDir, `HairLifecycle-${toDate}.pdf`);
+  const target = new File(exportsDir, `hair-growth-${toDate}.pdf`);
   target.create({ overwrite: true });
   target.write(printed.base64, { encoding: 'base64' });
 
