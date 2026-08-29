@@ -55,7 +55,8 @@
         "expo-camera",
         {
           "cameraPermission": "Used to line up your progress photos consistently, angle by angle.",
-          "recordAudioAndroid": false
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": false
         }
       ],
       "expo-secure-store",
