@@ -1,4 +1,3 @@
-import { Tabs } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
@@ -20,18 +19,6 @@ export default function LearnScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Tabs.Screen
-        options={{
-          title: 'Learn',
-          tabBarIcon: ({ color }) => (
-            <Icon
-              name={{ ios: 'book.fill', android: 'menu_book', web: 'menu_book' }}
-              size={22}
-              color={color}
-            />
-          ),
-        }}
-      />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ThemedText type="subtitle">Learn</ThemedText>
 

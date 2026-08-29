@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Tabs } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Icon } from '@/components/icon';
@@ -62,18 +61,6 @@ export default function RoutineScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Tabs.Screen
-        options={{
-          title: 'Routine',
-          tabBarIcon: ({ color }) => (
-            <Icon
-              name={{ ios: 'checklist', android: 'checklist', web: 'checklist' }}
-              size={22}
-              color={color}
-            />
-          ),
-        }}
-      />
       <ScrollView contentContainerStyle={styles.content}>
         <ThemedText type="subtitle">Routine</ThemedText>
 

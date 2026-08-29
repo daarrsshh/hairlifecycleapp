@@ -61,10 +61,25 @@ function TimelineRow({ event }: { event: TimelineEvent }) {
   );
 }
 
+/**
+ * The headline. A routine that *replaced* another says what changed, not "Started" again —
+ * changing a dose time creates a new routine, so every edit used to produce a second identical
+ * "Started oral Minoxidil" with nothing to distinguish it.
+ */
 function summarize(event: TimelineEvent): string {
   switch (event.type) {
-    case 'routine-started':
-      return `Started ${event.label}`;
+    case 'routine-started': {
+      if (!event.change) return `Started ${event.label}`;
+      const { added, removed, rescheduled } = event.change;
+      const parts = [
+        added.length ? `Added ${added.join(', ')}` : null,
+        removed.length ? `Stopped ${removed.join(', ')}` : null,
+        rescheduled.length ? `Rescheduled ${rescheduled.join(', ')}` : null,
+      ].filter(Boolean);
+      // A new routine whose items are identical to the last — possible if only a dosage or
+      // the item order changed — still deserves an honest label rather than a blank one.
+      return parts.length ? parts.join(' · ') : 'Routine updated';
+    }
     case 'routine-paused':
       return 'Paused';
     case 'routine-resumed':
@@ -77,7 +92,9 @@ function summarize(event: TimelineEvent): string {
 function detail(event: TimelineEvent): string {
   switch (event.type) {
     case 'routine-started':
-      return event.itemNames.join(', ');
+      // Expanding shows the full routine as it stood from this date, so a change entry can be
+      // read in context rather than only as a delta.
+      return event.itemNames.length ? `Now taking: ${event.itemNames.join(', ')}` : 'No items';
     case 'photos':
       return event.angles.map((a) => ANGLE_LABEL[a] ?? a).join(', ');
     default:

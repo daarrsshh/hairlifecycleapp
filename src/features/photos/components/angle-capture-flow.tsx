@@ -1,6 +1,7 @@
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useState, type ReactNode } from 'react';
-import { Image, Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -87,7 +88,17 @@ export function AngleCaptureFlow({
                   onPress={() => setActiveAngle(angle.value)}
                   style={[styles.angleCard, { borderColor: theme.border }]}>
                   {uri ? (
-                    <Image source={{ uri }} style={StyleSheet.absoluteFill} />
+                    /* expo-image, not React Native's — this is the one place several
+                       full-resolution camera photos are on screen at once. `takePictureAsync`
+                       returns the full sensor image (12MP is ~48MB decoded), and RN's Image was
+                       the only one left in the app; every other photo surface already uses
+                       expo-image, which downsamples to the display size and bounds its cache. */
+                    <Image
+                      source={{ uri }}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      recyclingKey={uri}
+                    />
                   ) : (
                     <ThemedText themeColor="textSecondary" type="small">
                       Tap to add

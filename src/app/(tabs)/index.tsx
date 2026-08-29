@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Tabs } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
@@ -24,19 +23,6 @@ import { ITEM_TYPE_ICON } from '@/features/routine/components/routine-builder';
 import { useTheme } from '@/hooks/use-theme';
 import { today } from '@/lib/date';
 
-function HomeTabScreen() {
-  return (
-    <Tabs.Screen
-      options={{
-        title: 'Home',
-        tabBarIcon: ({ color }) => (
-          <Icon name={{ ios: 'house.fill', android: 'home', web: 'home' }} size={22} color={color} />
-        ),
-      }}
-    />
-  );
-}
-
 export default function HomeScreen() {
   const theme = useTheme();
   const { data, isLoading } = useTodayDoses();
@@ -53,7 +39,6 @@ export default function HomeScreen() {
   if (isLoading || !data) {
     return (
       <ThemedView style={styles.container}>
-        <HomeTabScreen />
       </ThemedView>
     );
   }
@@ -65,7 +50,6 @@ export default function HomeScreen() {
   if (!routine) {
     return (
       <ThemedView style={styles.container}>
-        <HomeTabScreen />
         <ThemedView style={styles.centered}>
           <ThemedText type="subtitle">No routine yet</ThemedText>
           <ThemedText themeColor="textSecondary">Head to the Routine tab to set one up.</ThemedText>
@@ -76,7 +60,6 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <HomeTabScreen />
       <ScrollView contentContainerStyle={styles.content}>
         <ThemedView>
           <ThemedText type="subtitle">Today</ThemedText>

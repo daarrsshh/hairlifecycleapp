@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { Tabs } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 
 import { Icon } from '@/components/icon';
@@ -31,18 +30,6 @@ export default function PhotosScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Tabs.Screen
-        options={{
-          title: 'Photos',
-          tabBarIcon: ({ color }) => (
-            <Icon
-              name={{ ios: 'camera.fill', android: 'photo_camera', web: 'photo_camera' }}
-              size={22}
-              color={color}
-            />
-          ),
-        }}
-      />
       <ScrollView contentContainerStyle={styles.content}>
         <ThemedView style={styles.actionsRow}>
           <LinkButton href="/photos/capture" style={[styles.actionButton, { backgroundColor: theme.primary }]}>
