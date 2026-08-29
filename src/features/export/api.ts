@@ -1,4 +1,5 @@
 import { Directory, File, Paths } from 'expo-file-system';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
@@ -38,30 +39,40 @@ function clearPreviousExports(dir: Directory) {
   }
 }
 
-const MIME_BY_EXTENSION: Record<string, string> = {
-  '.png': 'image/png',
-  '.webp': 'image/webp',
-  '.heic': 'image/heic',
-};
+/**
+ * Photos are stored at full capture resolution and no compression, which is right for the
+ * library and wrong for this document — the PDF renders each one in a 140px box.
+ *
+ * Embedding the originals would put roughly 9MB per photo, inflated a further 33% by base64,
+ * into a single JavaScript string: an all-time export crosses half a gigabyte and dies with an
+ * out-of-memory error rather than a message. Downscaling first is not a quality compromise
+ * here, because nothing at 140px can show what the extra pixels held.
+ */
+const EXPORT_PHOTO_WIDTH = 600; // ~4x the 140px box, so it stays crisp zoomed or printed
+const EXPORT_PHOTO_COMPRESS = 0.7;
 
 /**
- * Inline a photo as a `data:` URI.
+ * Inline a photo as a `data:` URI, downscaled to print size.
  *
  * The HTML previously pointed `<img src>` at the stored `file:///…` path. Whether the WebView
  * behind `expo-print` will load a local file is platform- and version-dependent, and when it
  * doesn't the failure is silent — a PDF that generates fine with blank spaces where the photos
  * should be. Embedding removes the question.
  *
- * Returns `null` for a file that can't be read, so one missing photo drops out of the export
- * instead of failing the whole thing. `File` is constructed inside the function, never at module
- * scope — expo-file-system has no native module during web's SSR pass.
+ * Returns `null` for a photo that can't be read or resized, so one bad file drops out of the
+ * export instead of failing the whole thing.
  */
 async function toDataUri(filePath: string): Promise<string | null> {
   try {
-    const file = new File(filePath);
-    const base64 = await file.base64();
-    const mime = MIME_BY_EXTENSION[(file.extension || '.jpg').toLowerCase()] ?? 'image/jpeg';
-    return `data:${mime};base64,${base64}`;
+    const rendered = await ImageManipulator.manipulate(filePath)
+      .resize({ width: EXPORT_PHOTO_WIDTH })
+      .renderAsync();
+    const { base64 } = await rendered.saveAsync({
+      base64: true,
+      compress: EXPORT_PHOTO_COMPRESS,
+      format: SaveFormat.JPEG,
+    });
+    return base64 ? `data:image/jpeg;base64,${base64}` : null;
   } catch {
     return null;
   }
@@ -89,19 +100,17 @@ export async function generateAndShareExport(options: {
     const allPhotos = await getAllPhotos();
     const inRange = allPhotos.filter((p) => p.date >= fromDate && p.date <= toDate);
 
-    const embedded = await Promise.all(
-      inRange.map(async (photo) => ({
-        angle: photo.angle,
-        date: photo.date,
-        filePath: await toDataUri(photo.filePath),
-      }))
-    );
-
+    // Deliberately sequential, not Promise.all. Resizing decodes the full image into a bitmap
+    // first — ~48MB for a 12MP photo — so mapping with Promise.all would start every decode at
+    // once and hold them all live simultaneously. That out-of-memories on a long range for the
+    // same reason the un-resized embedding did; running them one at a time keeps the peak at a
+    // single decode regardless of how many photos the export covers.
     const byAngle = new Map<string, { date: string; filePath: string }[]>();
-    for (const photo of embedded) {
-      if (!photo.filePath) continue; // unreadable file — leave it out rather than print a gap
+    for (const photo of inRange) {
+      const dataUri = await toDataUri(photo.filePath);
+      if (!dataUri) continue; // unreadable file — leave it out rather than print a gap
       const list = byAngle.get(photo.angle) ?? [];
-      list.push({ date: photo.date, filePath: photo.filePath });
+      list.push({ date: photo.date, filePath: dataUri });
       byAngle.set(photo.angle, list);
     }
     photoGroups = [...byAngle.entries()].map(([angle, photos]) => ({

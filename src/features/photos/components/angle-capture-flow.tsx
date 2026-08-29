@@ -47,7 +47,7 @@ export function AngleCaptureFlow({
   const [activeAngle, setActiveAngle] = useState<PhotoAngle | null>(null);
 
   async function pickFromLibrary(angle: PhotoAngle) {
-    const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
+    const result = await ImagePicker.launchImageLibraryAsync({ quality: 1 })  // no re-compression of an already-compressed library image;
     if (!result.canceled && result.assets[0]) {
       setCaptured((prev) => ({ ...prev, [angle]: result.assets[0].uri }));
     }

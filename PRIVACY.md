@@ -57,10 +57,14 @@ pick. We never receive a copy.
 
 ## Backups
 
-Android may back up a small amount of app data — your routine, your logged doses, and your first
-set of photos — to your own Google Drive, so it can be restored if you reinstall. This is a
-service between you and Google. We have no access to it. You can turn it off in your device's
-backup settings.
+Android may back up a small amount of app data — your routine and your logged doses — to your own
+Google Drive, so it can be restored if you reinstall. This is a service between you and Google.
+We have no access to it. You can turn it off in your device's backup settings.
+
+**Your photos are not included in that backup.** They are kept at full quality, which makes them
+far too large for the backup allowance, and a backup that goes over the limit is dropped
+entirely — taking your routine and dose history with it. If you uninstall the app or reset your
+phone, your photos are gone. Copy them somewhere yourself if you want to keep them.
 
 ## Deleting your data
 

@@ -58,6 +58,26 @@ export default function SettingsScreen() {
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ headerShown: true, title: 'Settings' }} />
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Disclosed here, not only in the privacy policy. Photos are the one thing a reinstall
+            loses, and the person most affected is the one furthest in — someone six months into
+            a timeline who assumed the app was keeping it. Told at month zero it's a note to
+            self; discovered at month six it's an accusation, and it would be a fair one.
+            Deliberately unconditional: unlike the Account block below, this is true always. */}
+        <ThemedText type="caption" themeColor="textSecondary" style={styles.label}>
+          Your data
+        </ThemedText>
+        <ThemedView type="backgroundElement" style={styles.card}>
+          <ThemedText themeColor="textSecondary" type="small">
+            Your routine and dose history are included in Android&apos;s backup, so they come back
+            if you reinstall.
+          </ThemedText>
+          <ThemedText themeColor="textSecondary" type="small">
+            Your photos are not. They&apos;re saved at full quality so fine detail stays
+            comparable months apart, which makes them far larger than the backup allows. Export a
+            PDF, or copy them off the phone, if you want a second copy.
+          </ThemedText>
+        </ThemedView>
+
         {/* Stated plainly rather than buried in a policy: an account exists, and it holds
             nothing. An account discovered later, rather than disclosed, is what costs trust. */}
         {auth && auth.state !== 'unconfigured' ? (

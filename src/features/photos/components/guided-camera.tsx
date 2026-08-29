@@ -48,7 +48,11 @@ export function GuidedCamera({
   }
 
   async function capture() {
-    const photo = await cameraRef.current?.takePictureAsync({ quality: 0.8 });
+    // quality: 1 — no JPEG compression. This is the compression level, not the resolution:
+    // 0.8 keeps every pixel but softens fine high-frequency detail, and individual hair strands
+    // are precisely that. Since comparing density months apart is the point of the app, the
+    // detail compression discards first is the detail the app exists to show.
+    const photo = await cameraRef.current?.takePictureAsync({ quality: 1 });
     if (photo) onCapture(photo.uri);
   }
 
